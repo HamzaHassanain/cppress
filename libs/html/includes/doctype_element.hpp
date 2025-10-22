@@ -3,7 +3,7 @@
 
 #include "element.hpp"
 
-namespace hh_html_builder {
+namespace cppress::html {
 /**
  * @brief Specialized element class for HTML DOCTYPE declarations.
  *
@@ -66,4 +66,4 @@ public:
      */
     std::string to_string() const override { return "<!DOCTYPE " + get_text_content() + ">"; }
 };
-}  // namespace hh_html_builder
+}  // namespace cppress

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(json_parser VERSION 1.0.0)
+project(json VERSION 1.0.0)
 
 
 # Source files
@@ -16,19 +16,19 @@ endif()
 # Create library target
 if(JSON_STANDALONE)
     # Standalone executable for testing
-    add_executable(json_parser app.cpp ${JSON_SOURCES})
-    target_compile_options(json_parser PRIVATE -g -O0)
+    add_executable(json app.cpp ${JSON_SOURCES})
+    target_compile_options(json PRIVATE -g -O0)
 else()
     # Library mode
-    add_library(json_parser STATIC ${JSON_SOURCES})
-    add_library(cppress::json_parser ALIAS json_parser)
+    add_library(json STATIC ${JSON_SOURCES})
+    add_library(cppress::json ALIAS json)
 endif()
 
 # Link to common dependencies
-target_link_libraries(json_parser PUBLIC cppress_common)
+target_link_libraries(json PUBLIC cppress_common)
 
 # Include directories
-target_include_directories(json_parser PUBLIC
+target_include_directories(json PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/includes>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>
@@ -37,7 +37,7 @@ target_include_directories(json_parser PUBLIC
 
 # Installation
 if(NOT JSON_STANDALONE)
-    install(TARGETS json_parser
+    install(TARGETS json
         EXPORT cppressTargets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

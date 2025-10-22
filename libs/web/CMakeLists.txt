@@ -135,5 +135,5 @@ find_package(Threads REQUIRED)
 target_link_libraries(hh_web_framework Threads::Threads)
 
 # Link libraries for each submodule
-set(SUBMODULE_LIBRARIES "http_server" "html_builder" "json_parser")  # Add more library names here as needed
+set(SUBMODULE_LIBRARIES "http_server" "html" "json")  # Add more library names here as needed
 target_link_libraries(hh_web_framework ${SUBMODULE_LIBRARIES})

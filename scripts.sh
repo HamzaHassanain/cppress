@@ -251,11 +251,7 @@ if [ "$1" = "test" ]; then
     
     cd build
     if [ -n "$2" ]; then
-        if [ "$2" = "small-only" ]; then
-            ctest -R "SMALL_" --output-on-failure
-        else
-            ctest -R "$2" --output-on-failure
-        fi
+        ctest -R "$2" --output-on-failure
     else
         ctest --output-on-failure
     fi

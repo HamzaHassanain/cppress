@@ -13,12 +13,33 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(BUILD_TESTS "Build tests" ON)
 option(BUILD_INTEGRATION_TESTS "Build integration tests" ON)
-option(ENABLE_SANITIZERS "Enable address/undefined behavior sanitizers" OFF)
+
+# Sanitizer support (set via -DSANITIZER=<type> from scripts.sh)
+set(SANITIZER "" CACHE STRING "Sanitizer type (address, thread, undefined, memory, leak)")
 
 # Global compiler flags
-if(ENABLE_SANITIZERS AND NOT WIN32)
-    add_compile_options(-fsanitize=address -fsanitize=undefined -g -O0)
-    add_link_options(-fsanitize=address -fsanitize=undefined)
+if(SANITIZER AND NOT WIN32)
+    message(STATUS "Enabling sanitizer: ${SANITIZER}")
+    
+    # Map sanitizer types to compiler flags
+    if(SANITIZER STREQUAL "address")
+        add_compile_options(-fsanitize=address -fno-omit-frame-pointer -g -O1)
+        add_link_options(-fsanitize=address)
+    elseif(SANITIZER STREQUAL "thread")
+        add_compile_options(-fsanitize=thread -fno-omit-frame-pointer -g -O1)
+        add_link_options(-fsanitize=thread)
+    elseif(SANITIZER STREQUAL "undefined")
+        add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer -g -O1)
+        add_link_options(-fsanitize=undefined)
+    elseif(SANITIZER STREQUAL "memory")
+        add_compile_options(-fsanitize=memory -fno-omit-frame-pointer -g -O1)
+        add_link_options(-fsanitize=memory)
+    elseif(SANITIZER STREQUAL "leak")
+        add_compile_options(-fsanitize=leak -fno-omit-frame-pointer -g -O1)
+        add_link_options(-fsanitize=leak)
+    else()
+        message(WARNING "Unknown sanitizer type: ${SANITIZER}")
+    endif()
 endif()
 
 # Platform-specific settings

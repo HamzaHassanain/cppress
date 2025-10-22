@@ -1,8 +1,8 @@
 #include <bits/stdc++.h>
 
-#include "html-builder.hpp"
+#include "includes.hpp"
 using namespace std;
-using namespace hh_html_builder;
+using namespace cppress::html;
 int main() {
     string path = "a-tmp.html";
     string content;
@@ -31,7 +31,7 @@ int main() {
             {"email", "contact@example.com"}
 
         };
-        auto elements = parse_html_string(content);
+        auto elements = parse(content);
         // write answer to x.html
 
         ofstream output("b-temp.html");

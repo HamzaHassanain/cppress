@@ -16,8 +16,8 @@ set(cppress_LIBRARIES
 #    cppress::socket_lib
 #    cppress::web_framework
 #    cppress::http_server
-    cppress::json_parser
-    cppress::html_builder
+    cppress::json
+    cppress::html
 )
 
 set(cppress_INCLUDE_DIRS 

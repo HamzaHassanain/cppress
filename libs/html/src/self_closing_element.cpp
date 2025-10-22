@@ -1,7 +1,7 @@
 #include "../includes/self_closing_element.hpp"
 
 #include <stdexcept>
-namespace hh_html_builder {
+namespace cppress::html {
 self_closing_element::self_closing_element(const std::string& tag) : element(tag) {}
 
 self_closing_element::self_closing_element(const std::string& tag,
@@ -38,4 +38,4 @@ void self_closing_element::add_child(std::shared_ptr<element> child) {
     (void)child;
     // throw std::runtime_error("Self-closing elements cannot have children");
 }
-}  // namespace hh_html_builder
+}  // namespace cppress

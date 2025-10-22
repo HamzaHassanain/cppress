@@ -42,12 +42,12 @@ if(TEST_FILES)
     )
 
     # Add libraries that exist (for integration testing)
-    if(TARGET json_parser)
-        target_link_libraries(integration_tests PRIVATE json_parser)
+    if(TARGET json)
+        target_link_libraries(integration_tests PRIVATE json)
     endif()
     
-    if(TARGET html_builder)
-        target_link_libraries(integration_tests PRIVATE html_builder)
+    if(TARGET html)
+        target_link_libraries(integration_tests PRIVATE html)
     endif()
     
     if(TARGET socket_lib)

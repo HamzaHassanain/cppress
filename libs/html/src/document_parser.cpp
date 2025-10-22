@@ -16,7 +16,7 @@
 #include "../includes/doctype_element.hpp"
 #include "../includes/element.hpp"
 #include "../includes/self_closing_element.hpp"
-namespace hh_html_builder {
+namespace cppress::html {
 /**
  * @brief Check if HTML string contains a DOCTYPE declaration.
  * @param html HTML string to check
@@ -434,7 +434,7 @@ std::pair<std::vector<std::shared_ptr<element>>, size_t> parse_html_optimized(
  * where the first element may be a DOCTYPE declaration followed by
  * the document's element structure.
  */
-std::vector<std::shared_ptr<element>> parse_html_string(std::string& html) {
+std::vector<std::shared_ptr<element>> parse(std::string& html) {
     remove_all_comments(html);
     transform_tags_to_lower_case(html);
     remove_all_line_breaks(html);
@@ -446,7 +446,7 @@ std::vector<std::shared_ptr<element>> parse_html_string(std::string& html) {
 
     if (!doctype.empty()) {
         doctype.pop_back();
-        doctype.erase(doctype.begin(), doctype.begin() + 9);  // Remove "<!doctype "
+        doctype.erase(doctype.begin(), doctype.begin() + 10);  // Remove "<!doctype "
         std::shared_ptr<element> doctype_element_ptr = std::make_shared<doctype_element>(doctype);
         result.insert(result.begin(), doctype_element_ptr);
     }
@@ -459,29 +459,45 @@ std::vector<std::shared_ptr<element>> parse_html_string(std::string& html) {
 }
 
 /**
- * @brief Template-based HTML generation with parameter substitution.
- * @param text HTML template string containing parameter placeholders
+ * @brief Substitutes parameters in any text
+ * @param text The text with the parameters to substitute
  * @param params Map of parameter names to replacement values
- * @return Processed HTML string with parameters substituted
+ * @return Processed text with parameters substituted
  *
- * Simple but effective templating system that replaces placeholders in the
- * format {{param_name}} with actual values from the parameter map.
+ * Processes a text by replacing parameter placeholders
+ * with actual values from the provided parameter map. This function enables
+ * template-based HTML generation where dynamic content can be injected
+ * into predefined HTML structures.
  *
- * Process:
- * 1. Scan the template for {{parameter_name}} patterns
- * 2. Replace each pattern with the corresponding value from params map
- * 3. Continue until all placeholders are processed
+ * The parameter substitution mechanism allows for:
+ * - Dynamic content insertion into HTML templates
+ * - Reusable HTML components with configurable values
+ * - Separation of HTML structure from dynamic data
+ * - Template-based document generation workflows
  *
- * Use cases:
- * - Dynamic content injection into HTML templates
- * - User-specific data insertion (names, preferences, etc.)
- * - Configuration-driven HTML generation
- * - Reusable HTML components with variable content
+ * Parameter placeholders in the HTML template are typically marked with
+ * special syntax (such as {{paramName}} or ${paramName}) that the parser
+ * recognizes and replaces with corresponding values from the params map.
  *
- * Example: "Hello {{name}}!" with params{"name": "World"} → "Hello World!"
+ * Example usage:
+ * ```cpp
+ * std::string template_html = "<h1>{{title}}</h1><p>Welcome, {{username}}!</p>";
+ * std::map<std::string, std::string> params = {
+ *     {"title", "Dashboard"},
+ *     {"username", "John Doe"}
+ * };
+ * std::string result = substitute_params(template_html, params);
+ * // Returns: "<h1>Dashboard</h1><p>Welcome, John Doe!</p>"
+ * ```
+ *
+ * @note Unmatched parameter placeholders may be left unchanged or removed
+ *       depending on implementation
+ * @note Parameter values are inserted as-is, so HTML escaping should be
+ *       handled separately if needed for security
+ * @note This function returns a processed string rather than element objects
  */
-std::string parse_html_with_params(const std::string& text,
-                                   const std::map<std::string, std::string>& params) {
+std::string substitute_params(const std::string& text,
+                              const std::map<std::string, std::string>& params) {
     std::string result = text;
 
     // Simple parameter substitution: {{param_name}}
@@ -496,4 +512,4 @@ std::string parse_html_with_params(const std::string& text,
     }
     return result;
 }
-}  // namespace hh_html_builder
+}  // namespace cppress::html

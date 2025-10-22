@@ -2,7 +2,7 @@
 
 #include "element.hpp"
 
-namespace hh_html_builder {
+namespace cppress::html {
 /**
  * @brief Specialized element class for HTML self-closing (void) elements.
  *
@@ -156,4 +156,4 @@ public:
      */
     virtual void set_text_content(const std::string& text_content) override;
 };
-}  // namespace hh_html_builder
+}  // namespace cppress

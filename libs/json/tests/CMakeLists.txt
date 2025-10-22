@@ -42,8 +42,8 @@ if(TEST_FILES)
     )
 
     # Add libraries that exist
-    if(TARGET json_parser)
-        target_link_libraries(json-tests PRIVATE json_parser)
+    if(TARGET json)
+        target_link_libraries(json-tests PRIVATE json)
     endif()
 
     # Tell CMake to find and register the tests to be run with CTest

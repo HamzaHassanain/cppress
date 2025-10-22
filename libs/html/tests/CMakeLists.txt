@@ -43,8 +43,8 @@ if(TEST_FILES)
 
  
     
-    if(TARGET html_builder)
-        target_link_libraries(html-tests PRIVATE html_builder)
+    if(TARGET html)
+        target_link_libraries(html-tests PRIVATE html)
     endif()
     
 

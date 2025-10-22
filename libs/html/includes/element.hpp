@@ -5,10 +5,11 @@
 #include <string>
 #include <vector>
 
-namespace hh_html_builder {
+namespace cppress::html {
 
 /**
- * @brief Core HTML element representation with hierarchical structure support.
+ * @brief Core HTML element representation with hierarchical structure support and STL-like
+ * interface.
  *
  * This class provides a comprehensive representation of HTML elements, supporting
  * all standard HTML features including tags, text content, attributes, and nested
@@ -21,8 +22,10 @@ namespace hh_html_builder {
  * hierarchical element relationships.
  *
  * Key features:
- * - Dynamic attribute management with key-value pairs
- * - Hierarchical child element support using smart pointers
+ * - Dynamic attribute management with key-value pairs (map-like interface)
+ * - Hierarchical child element support using smart pointers (vector-like interface)
+ * - STL-like container operations (size(), empty(), at(), begin(), end(), etc.)
+ * - Iterator support for traversing child elements
  * - Text content handling for leaf nodes
  * - Recursive parameter setting for template-like functionality
  * - Deep copying capabilities for element duplication
@@ -32,6 +35,7 @@ namespace hh_html_builder {
  *       management and allow safe sharing of elements across different contexts.
  * @note The class is designed to be extended for specialized element types
  *       such as self-closing elements or custom components.
+ * @note The STL-like interface provides consistency with other cppress libraries (e.g., JSON)
  */
 class element {
 protected:
@@ -48,6 +52,25 @@ protected:
     std::vector<std::shared_ptr<element>> children;
 
 public:
+    // STL-like type aliases for children container
+    using value_type = std::shared_ptr<element>;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using reference = value_type&;
+    using const_reference = const value_type&;
+    using iterator = std::vector<value_type>::iterator;
+    using const_iterator = std::vector<value_type>::const_iterator;
+    using reverse_iterator = std::vector<value_type>::reverse_iterator;
+    using const_reverse_iterator = std::vector<value_type>::const_reverse_iterator;
+
+    // STL-like type aliases for attributes container
+    using attribute_key_type = std::string;
+    using attribute_value_type = std::string;
+    using attribute_type = std::pair<const attribute_key_type, attribute_value_type>;
+    using attributes_iterator = std::map<attribute_key_type, attribute_value_type>::iterator;
+    using attributes_const_iterator =
+        std::map<attribute_key_type, attribute_value_type>::const_iterator;
+
     /**
      * @brief Default constructor creating an empty element.
      *
@@ -129,6 +152,12 @@ public:
      * @note Virtual method allows specialized element types to override
      *       child addition behavior if needed.
      */
+
+    /**
+     * @brief Virtual default destructor
+     */
+    virtual ~element() = default;
+
     virtual void add_child(std::shared_ptr<element> child);
 
     /**
@@ -269,6 +298,246 @@ public:
      */
     std::map<std::string, std::string> get_attributes() const;
 
+    // STL-like methods for children management
+
+    /**
+     * @brief Returns the number of child elements.
+     * @return The number of children.
+     */
+    size_type size() const noexcept;
+
+    /**
+     * @brief Checks if the element has no children.
+     * @return true if there are no children, false otherwise.
+     */
+    bool empty() const noexcept;
+
+    /**
+     * @brief Accesses a child element by index with bounds checking.
+     * @param index The index of the child to access.
+     * @return A reference to the child element.
+     * @throws std::out_of_range if index is out of bounds.
+     */
+    reference at(size_type index);
+
+    /**
+     * @brief Accesses a child element by index with bounds checking (const version).
+     * @param index The index of the child to access.
+     * @return A const reference to the child element.
+     * @throws std::out_of_range if index is out of bounds.
+     */
+    const_reference at(size_type index) const;
+
+    /**
+     * @brief Adds a child element to the end (alias for add_child).
+     * @param child Shared pointer to the child element to add.
+     */
+    void push_back(std::shared_ptr<element> child);
+
+    /**
+     * @brief Removes the last child element.
+     * @throws std::out_of_range if there are no children.
+     */
+    void pop_back();
+
+    /**
+     * @brief Accesses the first child element.
+     * @return A reference to the first child.
+     * @throws std::out_of_range if there are no children.
+     */
+    reference front();
+
+    /**
+     * @brief Accesses the first child element (const version).
+     * @return A const reference to the first child.
+     * @throws std::out_of_range if there are no children.
+     */
+    const_reference front() const;
+
+    /**
+     * @brief Accesses the last child element.
+     * @return A reference to the last child.
+     * @throws std::out_of_range if there are no children.
+     */
+    reference back();
+
+    /**
+     * @brief Accesses the last child element (const version).
+     * @return A const reference to the last child.
+     * @throws std::out_of_range if there are no children.
+     */
+    const_reference back() const;
+
+    /**
+     * @brief Removes all child elements.
+     */
+    void clear() noexcept;
+
+    /**
+     * @brief Reserves capacity for child elements.
+     * @param capacity Minimum capacity to reserve.
+     */
+    void reserve(size_type capacity);
+
+    /**
+     * @brief Returns an iterator to the beginning of children.
+     * @return Iterator to the first child.
+     */
+    iterator begin() noexcept;
+
+    /**
+     * @brief Returns a const iterator to the beginning of children.
+     * @return Const iterator to the first child.
+     */
+    const_iterator begin() const noexcept;
+
+    /**
+     * @brief Returns a const iterator to the beginning of children.
+     * @return Const iterator to the first child.
+     */
+    const_iterator cbegin() const noexcept;
+
+    /**
+     * @brief Returns an iterator to the end of children.
+     * @return Iterator to one past the last child.
+     */
+    iterator end() noexcept;
+
+    /**
+     * @brief Returns a const iterator to the end of children.
+     * @return Const iterator to one past the last child.
+     */
+    const_iterator end() const noexcept;
+
+    /**
+     * @brief Returns a const iterator to the end of children.
+     * @return Const iterator to one past the last child.
+     */
+    const_iterator cend() const noexcept;
+
+    /**
+     * @brief Returns a reverse iterator to the beginning.
+     * @return Reverse iterator to the first child of reversed container.
+     */
+    reverse_iterator rbegin() noexcept;
+
+    /**
+     * @brief Returns a const reverse iterator to the beginning.
+     * @return Const reverse iterator to the first child of reversed container.
+     */
+    const_reverse_iterator rbegin() const noexcept;
+
+    /**
+     * @brief Returns a const reverse iterator to the beginning.
+     * @return Const reverse iterator to the first child of reversed container.
+     */
+    const_reverse_iterator crbegin() const noexcept;
+
+    /**
+     * @brief Returns a reverse iterator to the end.
+     * @return Reverse iterator to one past the last child of reversed container.
+     */
+    reverse_iterator rend() noexcept;
+
+    /**
+     * @brief Returns a const reverse iterator to the end.
+     * @return Const reverse iterator to one past the last child of reversed container.
+     */
+    const_reverse_iterator rend() const noexcept;
+
+    /**
+     * @brief Returns a const reverse iterator to the end.
+     * @return Const reverse iterator to one past the last child of reversed container.
+     */
+    const_reverse_iterator crend() const noexcept;
+
+    // STL-like methods for attributes management
+
+    /**
+     * @brief Sets or updates an attribute value.
+     * @param key The attribute name.
+     * @param value The attribute value.
+     */
+    void set_attribute(const std::string& key, const std::string& value);
+
+    /**
+     * @brief Removes an attribute by key.
+     * @param key The attribute name to remove.
+     * @return The number of attributes removed (0 or 1).
+     */
+    size_type erase_attribute(const std::string& key);
+
+    /**
+     * @brief Checks if an attribute exists.
+     * @param key The attribute name to check.
+     * @return true if the attribute exists, false otherwise.
+     */
+    bool has_attribute(const std::string& key) const;
+
+    /**
+     * @brief Returns the number of attributes.
+     * @return The number of attributes.
+     */
+    size_type attributes_size() const noexcept;
+
+    /**
+     * @brief Checks if the element has no attributes.
+     * @return true if there are no attributes, false otherwise.
+     */
+    bool attributes_empty() const noexcept;
+
+    /**
+     * @brief Returns an iterator to the beginning of attributes.
+     * @return Iterator to the first attribute.
+     */
+    attributes_iterator attributes_begin() noexcept;
+
+    /**
+     * @brief Returns a const iterator to the beginning of attributes.
+     * @return Const iterator to the first attribute.
+     */
+    attributes_const_iterator attributes_begin() const noexcept;
+
+    /**
+     * @brief Returns a const iterator to the beginning of attributes.
+     * @return Const iterator to the first attribute.
+     */
+    attributes_const_iterator attributes_cbegin() const noexcept;
+
+    /**
+     * @brief Returns an iterator to the end of attributes.
+     * @return Iterator to one past the last attribute.
+     */
+    attributes_iterator attributes_end() noexcept;
+
+    /**
+     * @brief Returns a const iterator to the end of attributes.
+     * @return Const iterator to one past the last attribute.
+     */
+    attributes_const_iterator attributes_end() const noexcept;
+
+    /**
+     * @brief Returns a const iterator to the end of attributes.
+     * @return Const iterator to one past the last attribute.
+     */
+    attributes_const_iterator attributes_cend() const noexcept;
+
+    // Operator overloads
+
+    /**
+     * @brief Accesses a child element by index without bounds checking.
+     * @param index The index of the child.
+     * @return A reference to the child element.
+     */
+    reference operator[](size_type index);
+
+    /**
+     * @brief Accesses a child element by index without bounds checking (const version).
+     * @param index The index of the child.
+     * @return A const reference to the child element.
+     */
+    const_reference operator[](size_type index) const;
+
     /**
      * @brief Get the value of a specific attribute.
      * @param key Name of the attribute to retrieve
@@ -285,4 +554,4 @@ public:
     std::string get_attribute(const std::string& key) const;
 };
 
-}  // namespace hh_html_builder
+}  // namespace cppress::html

@@ -7,7 +7,7 @@
 #include "element.hpp"
 #include "self_closing_element.hpp"
 
-namespace hh_html_builder {
+namespace cppress::html {
 /**
  * @brief Parse HTML string into a collection of element objects.
  * @param html Reference to HTML string to parse (may be modified during parsing)
@@ -34,7 +34,7 @@ namespace hh_html_builder {
  * Example usage:
  * ```cpp
  * std::string html = "<div class='container'><p>Hello</p><br><p>World</p></div>";
- * auto elements = parse_html_string(html);
+ * auto elements = parse(html);
  * // Returns vector with one div element containing p, br, and p children
  * ```
  *
@@ -43,15 +43,15 @@ namespace hh_html_builder {
  *       (regular elements vs. self-closing elements)
  * @note Returns empty vector if the HTML string is empty or contains no valid elements
  */
-std::vector<std::shared_ptr<element>> parse_html_string(std::string& html);
+std::vector<std::shared_ptr<element>> parse(std::string& html);
 
 /**
- * @brief Parse HTML template string with parameter substitution.
- * @param text HTML template string containing parameter placeholders
+ * @brief Substitutes parameters in any text
+ * @param text The text with the parameters to substitute
  * @param params Map of parameter names to replacement values
- * @return Processed HTML string with parameters substituted
+ * @return Processed text with parameters substituted
  *
- * Processes an HTML template string by replacing parameter placeholders
+ * Processes a text by replacing parameter placeholders
  * with actual values from the provided parameter map. This function enables
  * template-based HTML generation where dynamic content can be injected
  * into predefined HTML structures.
@@ -73,7 +73,7 @@ std::vector<std::shared_ptr<element>> parse_html_string(std::string& html);
  *     {"title", "Dashboard"},
  *     {"username", "John Doe"}
  * };
- * std::string result = parse_html_with_params(template_html, params);
+ * std::string result = substitute_params(template_html, params);
  * // Returns: "<h1>Dashboard</h1><p>Welcome, John Doe!</p>"
  * ```
  *
@@ -83,8 +83,8 @@ std::vector<std::shared_ptr<element>> parse_html_string(std::string& html);
  *       handled separately if needed for security
  * @note This function returns a processed string rather than element objects
  */
-std::string parse_html_with_params(const std::string& text,
-                                   const std::map<std::string, std::string>& params);
+std::string substitute_params(const std::string& text,
+                              const std::map<std::string, std::string>& params);
 
 /**
  * @brief Internal optimized parsing function for HTML string segments.
@@ -121,4 +121,4 @@ std::string parse_html_with_params(const std::string& text,
  */
 std::pair<std::vector<std::shared_ptr<element>>, size_t> parse_html_optimized(
     const std::string& html, size_t start, size_t end);
-}  // namespace hh_html_builder
+}  // namespace cppress::html
