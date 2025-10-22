@@ -1,66 +1,63 @@
-cmake_minimum_required(VERSION 3.10)
-project(html_builder)
+cmake_minimum_required(VERSION 3.15)
+project(html_builder VERSION 1.0.0)
 
-# Function to read .env file and set variables
-function(load_env_file env_file)
-    if(EXISTS ${env_file})
-        file(READ ${env_file} ENV_CONTENT)
-        string(REPLACE "\n" ";" ENV_LINES ${ENV_CONTENT})
-        
-        foreach(line ${ENV_LINES})
-            # Skip empty lines and comments
-            if(line AND NOT line MATCHES "^#")
-                string(FIND ${line} "=" eq_pos)
-                if(eq_pos GREATER -1)
-                    string(SUBSTRING ${line} 0 ${eq_pos} var_name)
-                    math(EXPR val_start "${eq_pos} + 1")
-                    string(SUBSTRING ${line} ${val_start} -1 var_value)
-                    
-                    # Remove any whitespace
-                    string(STRIP ${var_name} var_name)
-                    string(STRIP ${var_value} var_value)
-                    
-                    # Set the variable in parent scope
-                    set(${var_name} ${var_value} PARENT_SCOPE)
-                    message(STATUS "Loaded env variable: ${var_name}=${var_value}")
-                endif()
-            endif()
-        endforeach()
-    else()
-        message(WARNING ".env file not found at ${env_file}")
-    endif()
-endfunction()
 
-# Load environment variables from .env file
-load_env_file(${CMAKE_SOURCE_DIR}/.env)
+# Source files
+file(GLOB HTML_SOURCES src/*.cpp)
+file(GLOB HTML_HEADERS includes/*.hpp)
 
-# define a variable called debug, that I can acess in a c++ code, to enable debugging
-set(DEBUG_MODE ON CACHE BOOL "Enable Debug Mode") 
-
-if(DEBUG_MODE)
-    add_definitions(-DDEBUG_MODE)
+# Determine if building as standalone or as part of larger project
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(HTML_STANDALONE ON)
+else()
+    set(HTML_STANDALONE OFF)
 endif()
 
-# add debuging for c++ gcc
-
-
-
-if(HTML_LOCAL_TEST AND HTML_LOCAL_TEST STREQUAL "1")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -fsanitize=address -g -O0")
+# Create library target
+if(HTML_STANDALONE)
+    # Standalone executable for testing
+    add_executable(html_builder app.cpp ${HTML_SOURCES})
+    target_compile_options(html_builder PRIVATE -g -O0)
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    # Library mode
+    add_library(html_builder STATIC ${HTML_SOURCES})
+    add_library(cppress::html_builder ALIAS html_builder)
 endif()
 
-file(GLOB SRC_FILES src/*.cpp)
+# Link to common dependencies
+target_link_libraries(html_builder PUBLIC cppress_common)
+
+# Include directories
+target_include_directories(html_builder PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/includes>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include>
+)
 
 
-set(CMAKE_CXX_STANDARD 17)
+
+# Installation
+if(NOT HTML_STANDALONE)
+    install(TARGETS html_builder
+        EXPORT cppressTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+    
+    install(DIRECTORY includes/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cppress/html
+    )
 
 
+    install(FILES includes.hpp
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cppress/html
+    )
+
+endif()
 
 
-if(HTML_LOCAL_TEST AND HTML_LOCAL_TEST STREQUAL "1")
-    add_executable(  html_builder app.cpp ${SRC_FILES}   )
-else()
-    add_library(html_builder STATIC ${SRC_FILES})
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    enable_testing()
+    add_subdirectory(tests)
 endif()

@@ -1,0 +1,27 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Find dependencies that users will need
+find_dependency(Threads REQUIRED)
+
+# Include the targets file (this loads your library targets)
+include("${CMAKE_CURRENT_LIST_DIR}/cppressTargets.cmake")
+
+# Provide the targets to users
+check_required_components(cppress)
+
+# Optional: Define convenience variables
+set(cppress_LIBRARIES 
+#    cppress::socket_lib
+#    cppress::web_framework
+#    cppress::http_server
+    cppress::json_parser
+    cppress::html_builder
+)
+
+set(cppress_INCLUDE_DIRS 
+    "${PACKAGE_PREFIX_DIR}/include/cppress"
+)
+
+set(cppress_VERSION ${PACKAGE_VERSION})

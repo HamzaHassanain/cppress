@@ -1,6 +1,6 @@
 ---
-# Clang-Tidy Configuration for C++ Memory Allocator Project
-# Based on Google C++ Style Guide with additional checks
+# Clang-Tidy Configuration for C++ cppress
+# Based on Google C++ Style Guide
 
 Checks: >
   -*,

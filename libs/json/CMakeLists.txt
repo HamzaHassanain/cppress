@@ -1,69 +1,65 @@
-cmake_minimum_required(VERSION 3.10)
-project(json_parser)
+cmake_minimum_required(VERSION 3.15)
+project(json_parser VERSION 1.0.0)
 
-# Set C++17 standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Windows-specific runtime library configuration
-if(WIN32 AND MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+# Source files
+file(GLOB JSON_SOURCES src/*.cpp)
+file(GLOB JSON_HEADERS includes/*.hpp)
+
+# Determine if building as standalone or as part of larger project
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(JSON_STANDALONE ON)
+else()
+    set(JSON_STANDALONE OFF)
 endif()
 
-# Load .env file and set JSON_LOCAL_TEST variable
-# Function to read .env file and set variables
-function(load_env_file env_file)
-    if(EXISTS ${env_file})
-        file(READ ${env_file} ENV_CONTENT)
-        string(REPLACE "\n" ";" ENV_LINES ${ENV_CONTENT})
-        
-        foreach(line ${ENV_LINES})
-            # Skip empty lines and comments
-            if(line AND NOT line MATCHES "^#")
-                string(FIND ${line} "=" eq_pos)
-                if(eq_pos GREATER -1)
-                    string(SUBSTRING ${line} 0 ${eq_pos} var_name)
-                    math(EXPR val_start "${eq_pos} + 1")
-                    string(SUBSTRING ${line} ${val_start} -1 var_value)
-                    
-                    # Remove any whitespace
-                    string(STRIP ${var_name} var_name)
-                    string(STRIP ${var_value} var_value)
-                    
-                    # Set the variable in parent scope
-                    set(${var_name} ${var_value} PARENT_SCOPE)
-                    message(STATUS "Loaded env variable: ${var_name}=${var_value}")
-                endif()
-            endif()
-        endforeach()
-    else()
-        message(WARNING ".env file not found at ${env_file}")
-    endif()
-endfunction()
-
-load_env_file(${CMAKE_SOURCE_DIR}/.env)
-
-if(JSON_LOCAL_TEST AND JSON_LOCAL_TEST STREQUAL "1")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -fsanitize=address -g -O0")
+# Create library target
+if(JSON_STANDALONE)
+    # Standalone executable for testing
+    add_executable(json_parser app.cpp ${JSON_SOURCES})
+    target_compile_options(json_parser PRIVATE -g -O0)
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    # Library mode
+    add_library(json_parser STATIC ${JSON_SOURCES})
+    add_library(cppress::json_parser ALIAS json_parser)
 endif()
 
-file(GLOB SRC_FILES src/*.cpp)
+# Link to common dependencies
+target_link_libraries(json_parser PUBLIC cppress_common)
 
-# Check environment variable
-if( JSON_LOCAL_TEST AND JSON_LOCAL_TEST STREQUAL "1")
-    message(STATUS "Building as executable (JSON_LOCAL_TEST=1)")
-    add_executable(json_parser app.cpp ${SRC_FILES})
-    target_compile_features(json_parser PRIVATE cxx_std_17)
-else()
-    message(STATUS "Building as static library (JSON_LOCAL_TEST!=1)")
-    add_library(json_parser STATIC ${SRC_FILES})
-    target_compile_features(json_parser PRIVATE cxx_std_17)
+# Include directories
+target_include_directories(json_parser PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/includes>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include>
+)
+
+
+# Installation
+if(NOT JSON_STANDALONE)
+    install(TARGETS json_parser
+        EXPORT cppressTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
     
-    # Only enable testing when building as library
+    install(DIRECTORY includes/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cppress/json
+    )
+
+
+    install(FILES includes.hpp
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cppress/json
+    )
+
+endif()
+
+
+
+# Unit tests
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests)
     enable_testing()
-    # Include the test subdirectory
     add_subdirectory(tests)
 endif()

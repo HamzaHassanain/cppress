@@ -22,33 +22,35 @@ file(GLOB TEST_FILES *_test.cpp)
 # Only create test executable if there are test files
 if(TEST_FILES)
     # Create a test executable
-    add_executable(json-tests ${TEST_FILES})
+    add_executable(html-tests ${TEST_FILES})
 
     # Set C++17 standard for tests
-    target_compile_features(json-tests PRIVATE cxx_std_17)
+    target_compile_features(html-tests PRIVATE cxx_std_17)
 
     # Windows-specific runtime library configuration
     if(WIN32 AND MSVC)
-        set_property(TARGET json-tests PROPERTY
+        set_property(TARGET html-tests PROPERTY
             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     endif()
 
     # Link against all cppress libraries and GTest
-    target_link_libraries(json-tests
+    target_link_libraries(html-tests
         PRIVATE
             cppress_common
             GTest::gtest_main
             GTest::gtest
     )
 
-    # Add libraries that exist
-    if(TARGET json_parser)
-        target_link_libraries(json-tests PRIVATE json_parser)
+ 
+    
+    if(TARGET html_builder)
+        target_link_libraries(html-tests PRIVATE html_builder)
     endif()
+    
 
     # Tell CMake to find and register the tests to be run with CTest
     include(GoogleTest)
-    gtest_discover_tests(json-tests)
+    gtest_discover_tests(html-tests)
     
     message(STATUS "Unit tests configured with ${TEST_FILES}")
 else()

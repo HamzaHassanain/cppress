@@ -1,18 +1,14 @@
 #include <bits/stdc++.h>
+
 #include "html-builder.hpp"
 using namespace std;
 using namespace hh_html_builder;
-int main()
-{
-
-    string path = "tmp.html";
+int main() {
+    string path = "a-tmp.html";
     string content;
     ifstream file(path);
-    try
-    {
-
-        if (file)
-        {
+    try {
+        if (file) {
             stringstream buffer;
             buffer << file.rdbuf();
             content = buffer.str();
@@ -38,11 +34,9 @@ int main()
         auto elements = parse_html_string(content);
         // write answer to x.html
 
-        ofstream output("x.html");
-        if (output)
-        {
-            for (auto &el : elements)
-            {
+        ofstream output("b-temp.html");
+        if (output) {
+            for (auto& el : elements) {
                 el->set_params_recursive(params);
                 output << el->to_string() << endl;
             }
@@ -87,9 +81,7 @@ int main()
 
         // std::cout << root.to_string() << endl;
         // std::cout << root2.to_string() << endl;
-    }
-    catch (const exception &e)
-    {
+    } catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
     }
 
