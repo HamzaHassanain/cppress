@@ -1,0 +1,5 @@
+{
+  "name": "<script>alert('XSS')</script>",
+  "description": "<img src=\"x\" onerror=\"alert('XSS')\">",
+  "price": 10.99
+}
