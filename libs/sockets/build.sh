@@ -19,7 +19,7 @@ mkdir -p build
 
 # Configure the project with CMake
 echo "Configuring CMake..."
-cmake -S . -B build
+cmake -S . -B build -DSOCKET_STANDALONE=ON
 
 # Build the project
 echo "Building project..."
@@ -28,10 +28,10 @@ make -j$(nproc)
 cd ..
 
 echo "Build completed successfully!"
-echo "Executable location: build/socket_lib"
+echo "Executable location: build/sockets"
 
 # Optionally run the executable if 'run' argument is passed
 if [ "$1" = "run" ]; then
     echo "Running the application..."
-    ./build/socket_lib
+    ./build/sockets
 fi
