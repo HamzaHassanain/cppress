@@ -70,7 +70,7 @@ bool is_valid_port(port p) {
     // Valid port range: 1-65535
     // Port 0 is technically valid but has special meaning (auto-assign)
     // Ports 1-1023 are privileged/well-known ports requiring special permissions
-    return p.get() > 0 && p.get() < 65536;
+    return p.value() > 0 && p.value() < 65536;
 }
 
 /**
@@ -108,8 +108,8 @@ bool is_free_port(port p) {
     sockaddr_in addr;
     std::memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;                      // Bind to any available interface
-    addr.sin_port = htons(static_cast<uint16_t>(p.get()));  // Convert port to network byte order
+    addr.sin_addr.s_addr = INADDR_ANY;                        // Bind to any available interface
+    addr.sin_port = htons(static_cast<uint16_t>(p.value()));  // Convert port to network byte order
 
     // Attempt to bind to the port
     bool tcp_available = (bind(tcp_socket, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0);
@@ -158,7 +158,7 @@ void convert_ip_address_to_network_order(const family& family_ip, const ip_addre
     if (family_ip == family(IPV4)) {
         // Convert IPv4 address string to binary format
         IN_ADDR in_addr;
-        if (InetPtonA(AF_INET, address.get().c_str(), &in_addr) == 1) {
+        if (InetPtonA(AF_INET, address.string().c_str(), &in_addr) == 1) {
             // Copy converted address to output buffer
             *(reinterpret_cast<IN_ADDR*>(addr)) = in_addr;
         }
@@ -166,7 +166,7 @@ void convert_ip_address_to_network_order(const family& family_ip, const ip_addre
     } else if (family_ip == family(IPV6)) {
         // Convert IPv6 address string to binary format
         IN6_ADDR in6_addr;
-        if (InetPtonA(AF_INET6, address.get().c_str(), &in6_addr) == 1) {
+        if (InetPtonA(AF_INET6, address.string().c_str(), &in6_addr) == 1) {
             // Copy converted address to output buffer
             *(reinterpret_cast<IN6_ADDR*>(addr)) = in6_addr;
         }
@@ -176,7 +176,7 @@ void convert_ip_address_to_network_order(const family& family_ip, const ip_addre
     // Unix/Linux implementation using standard inet_pton()
     // Handles both IPv4 and IPv6 based on family parameter
     // Returns 1 on success, 0 for invalid format, -1 for unsupported family
-    inet_pton(family_ip.get(), address.get().c_str(), addr);
+    inet_pton(family_ip.value(), address.string().c_str(), addr);
     // Note: Return value not checked - caller should validate
 #endif
 }
@@ -410,7 +410,7 @@ std::string to_upper_case(const std::string& input) {
 std::shared_ptr<cppress::sockets::socket> make_listener_socket(uint16_t port, const std::string& ip,
                                                                int backlog) {
     try {
-        auto sock_ptr = std::make_shared<cppress::sockets::socket>(cppress::sockets::Protocol::TCP);
+        auto sock_ptr = std::make_shared<cppress::sockets::socket>(cppress::sockets::type::stream);
 
         sock_ptr->set_reuse_address(true);
         sock_ptr->set_non_blocking(true);

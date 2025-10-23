@@ -1,3 +1,71 @@
+/**
+ * @file port.hpp
+ * @brief Type-safe network port wrapper with validation.
+ *
+ * This file provides the port class, a validated wrapper around port numbers that
+ * ensures only valid port values (0-65535) are used in network operations. It
+ * prevents common networking errors by validating port numbers at construction time.
+ *
+ * @section usage Common Usage Patterns
+ *
+ * **Creating Ports:**
+ * @code
+ * #include "port.hpp"
+ * using namespace cppress::sockets;
+ *
+ * // Valid ports
+ * port http(80);
+ * port https(443);
+ * port custom(8080);
+ * port ephemeral(49152);
+ *
+ * // Port validation at construction
+ * try {
+ *     port invalid(70000);  // Throws socket_exception
+ * } catch (const socket_exception& e) {
+ *     std::cerr << "Invalid port: " << e.what() << "\n";
+ * }
+ *
+ * // Default construction
+ * port p;  // Uninitialized, must assign before use
+ * p = port(3000);
+ * @endcode
+ *
+ * **Common Port Numbers:**
+ * @code
+ * // Well-known ports (0-1023)
+ * port ftp_data(20);
+ * port ftp_control(21);
+ * port ssh(22);
+ * port telnet(23);
+ * port smtp(25);
+ * port dns(53);
+ * port http(80);
+ * port pop3(110);
+ * port https(443);
+ *
+ * // Registered ports (1024-49151)
+ * port mysql(3306);
+ * port postgresql(5432);
+ * port mongodb(27017);
+ * port redis(6379);
+ *
+ * // Dynamic/private ports (49152-65535)
+ * port ephemeral(50000);
+ * @endcode
+ *
+ * @section integration Integration with Sockets Library
+ * The port class integrates with other cppress::sockets components:
+ * - Component of socket_address (IP/port/family triplet)
+ * - Used by socket class for binding and connecting
+ * - Validated automatically at construction
+ * - Provides value() for network byte order conversion
+ * - Used by utility functions (is_free_port, get_random_free_port)
+ *
+ * @author Hamza Mohammed Hassanain
+ * @version 1.0
+ */
+
 #pragma once
 
 #include <ostream>
@@ -57,10 +125,35 @@ public:
     port& operator=(port&&) = default;
 
     /**
-     * @brief Get the port number.
+     * @brief Get the port number (STL-style accessor).
+     * @return Port number as integer
+     *
+     * Returns the stored port number value. This follows STL conventions
+     * for value-type accessors like std::optional::value().
+     */
+    int value() const { return port_id; }
+
+    /**
+     * @brief Legacy accessor for backward compatibility.
+     * @deprecated Use value() instead
      * @return Port number as integer
      */
-    int get() const { return port_id; }
+    [[deprecated("Use value() instead")]]
+    int get() const {
+        return value();
+    }
+
+    /**
+     * @brief Implicit conversion to int for convenience.
+     * @return Port number as integer
+     *
+     * Allows using port objects directly where integers are expected:
+     * @code
+     * port p(8080);
+     * int port_num = p; // Implicit conversion
+     * @endcode
+     */
+    operator int() const { return port_id; }
 
     /**
      * @brief Equality comparison operator.

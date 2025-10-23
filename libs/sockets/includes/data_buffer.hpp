@@ -1,3 +1,90 @@
+/**
+ * @file data_buffer.hpp
+ * @brief Dynamic buffer for binary data management in the cppress sockets library.
+ *
+ * This file provides the data_buffer class, a STL-compliant container for storing
+ * and managing binary data in network and file I/O operations. It wraps std::vector<char>
+ * with a convenient interface designed for accumulating data from multiple sources.
+ *
+ * @section usage Common Usage Patterns
+ *
+ * **Basic Construction and Appending:**
+ * @code
+ * #include "data_buffer.hpp"
+ * using namespace cppress::sockets;
+ *
+ * // Create empty buffer
+ * data_buffer buf1;
+ *
+ * // Create from string
+ * data_buffer buf2("Hello, World!");
+ *
+ * // Create from raw data
+ * char raw[] = {0x48, 0x65, 0x6C, 0x6C, 0x6F};
+ * data_buffer buf3(raw, 5);
+ *
+ * // Append data
+ * buf1.append("Data");
+ * buf1.append(raw, 5);
+ * buf1.append(buf2);
+ * @endcode
+ *
+ * **Network I/O Usage:**
+ * @code
+ * // Accumulate data from network socket
+ * data_buffer received_data;
+ * connection conn = server.accept();
+ *
+ * while (conn.is_open()) {
+ *     auto chunk = conn.read();
+ *     received_data.append(chunk);
+ *
+ *     if (received_data.size() >= expected_size) {
+ *         break;
+ *     }
+ * }
+ *
+ * // Process complete data
+ * std::string message = received_data.to_string();
+ * @endcode
+ *
+ * **STL-like Operations:**
+ * @code
+ * data_buffer buf;
+ * buf.append("Test data");
+ *
+ * // Query buffer state
+ * if (!buf.empty()) {
+ *     std::size_t bytes = buf.size();
+ *     const char* raw_ptr = buf.data();
+ *
+ *     // Send over network
+ *     conn.write(buf);
+ * }
+ *
+ * // Clear when done
+ * buf.clear();
+ * @endcode
+ *
+ * @section integration Integration with Sockets Library
+ * The data_buffer class is designed to work seamlessly with other cppress::sockets
+ * components:
+ * - connection::read() returns data_buffer
+ * - connection::write() accepts data_buffer
+ * - Efficient for HTTP request/response body handling
+ * - Used in streaming protocols for data accumulation
+ *
+ * @section performance Performance Characteristics
+ * - Append operations: Amortized O(1) time complexity
+ * - Copy construction/assignment: O(n) where n is buffer size
+ * - Move operations: O(1) constant time
+ * - Memory: Single contiguous allocation via std::vector
+ * - Clear operation: Deallocates memory with shrink_to_fit()
+ *
+ * @author Hamza Moahmmed Hassanain
+ * @version 1.0
+ */
+
 #pragma once
 
 #include <string>

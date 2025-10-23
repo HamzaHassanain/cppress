@@ -6,12 +6,6 @@ project(sockets VERSION 1.0.0)
 file(GLOB SOCKET_SOURCES src/*.cpp)
 file(GLOB SOCKET_HEADERS includes/*.hpp)
 
-# Determine if building as standalone or as part of larger project
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    set(SOCKET_STANDALONE ON)
-else()
-    set(SOCKET_STANDALONE OFF)
-endif()
 
 # Create library target
 if(SOCKET_STANDALONE)
@@ -22,10 +16,10 @@ else()
     # Library mode
     add_library(sockets STATIC ${SOCKET_SOURCES})
     add_library(cppress::sockets ALIAS sockets)
+    # Link to common dependencies
+    target_link_libraries(sockets PUBLIC cppress_common)
 endif()
 
-# Link to common dependencies
-target_link_libraries(sockets PUBLIC cppress_common)
 
 # Include directories
 target_include_directories(sockets PUBLIC

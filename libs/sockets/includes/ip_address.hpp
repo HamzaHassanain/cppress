@@ -1,3 +1,89 @@
+/**
+ * @file ip_address.hpp
+ * @brief Type-safe IP address wrapper with STL-style interface.
+ *
+ * This file provides the ip_address class, a lightweight, type-safe wrapper around
+ * IP address strings for both IPv4 and IPv6 addresses. It provides convenient
+ * comparison operations and STL-compatible interfaces for use in network programming.
+ *
+ * @section usage Common Usage Patterns
+ *
+ * **Creating IP Addresses:**
+ * @code
+ * #include "ip_address.hpp"
+ * using namespace cppress::sockets;
+ *
+ * // IPv4 addresses
+ * ip_address localhost("127.0.0.1");
+ * ip_address server("192.168.1.100");
+ * ip_address wildcard("0.0.0.0");
+ *
+ * // IPv6 addresses
+ * ip_address ipv6_localhost("::1");
+ * ip_address ipv6_addr("2001:0db8:85a3::8a2e:0370:7334");
+ * ip_address ipv6_wildcard("::");
+ *
+ * // Default construction (empty)
+ * ip_address empty;
+ * @endcode
+ *
+ * **Copy and Move:**
+ * @code
+ * // Copy (efficient for small strings)
+ * ip_address addr1("192.168.1.1");
+ * ip_address addr2 = addr1;
+ *
+ * // Move (more efficient)
+ * ip_address addr3 = std::move(addr1);
+ *
+ * // Function returns
+ * ip_address get_server_ip() {
+ *     return ip_address("192.168.1.100");
+ * }
+ * ip_address server = get_server_ip();  // RVO or move
+ * @endcode
+ *
+ * **Integration with socket_address:**
+ * @code
+ * #include "socket_address.hpp"
+ *
+ * // Create socket address with IP
+ * ip_address server_ip("192.168.1.100");
+ * socket_address addr(port(8080), server_ip);
+ *
+ * // Extract IP from socket address
+ * ip_address extracted = addr.address();
+ * std::cout << "Server at " << extracted << "\n";
+ * @endcode
+ *
+ * @section validation Validation Notes
+ *
+ * **Important**: This class does NOT validate IP address format. It stores
+ * whatever string is provided. Validation should be performed by:
+ * - Higher-level classes (socket_address)
+ * - Utility functions (convert_ip_address_to_network_order)
+ * - System calls (inet_pton will fail on invalid addresses)
+ *
+ * Example of what is accepted (but may fail later):
+ * @code
+ * ip_address invalid1("not.an.ip");     // Accepted, but invalid
+ * ip_address invalid2("999.999.999.999"); // Accepted, out of range
+ * ip_address invalid3("");              // Accepted, empty string
+ * @endcode
+ *
+ * @section integration Integration with Sockets Library
+ * The ip_address class integrates with other cppress::sockets components:
+ * - Component of socket_address (IP/port/family triplet)
+ * - Used by utilities for network byte order conversion
+ * - Extracted from sockaddr structures
+ * - Provides string representation for display and logging
+ *
+ *
+ *
+ * @author Hamza Mohammed Hassanain
+ * @version 1.0
+ */
+
 #pragma once
 
 #include <ostream>
@@ -62,14 +148,36 @@ public:
     ip_address& operator=(ip_address&&) = default;
 
     /**
-     * @brief Get the IP address string.
+     * @brief Get the IP address string (STL-style accessor).
      * @return Const reference to the IP address string
      *
      * Returns a const reference to the internal string representation
      * of the IP address. This avoids copying and allows efficient
      * access to the address value.
      */
-    const std::string& get() const { return address; }
+    const std::string& string() const { return address; }
+
+    /**
+     * @brief Legacy accessor for backward compatibility.
+     * @deprecated Use string() instead
+     * @return Const reference to the IP address string
+     */
+    [[deprecated("Use string() instead")]]
+    const std::string& get() const {
+        return string();
+    }
+
+    /**
+     * @brief Implicit conversion to string for convenience.
+     * @return Copy of the IP address string
+     *
+     * Allows using ip_address objects directly where strings are expected:
+     * @code
+     * ip_address addr("127.0.0.1");
+     * std::string str = addr; // Implicit conversion
+     * @endcode
+     */
+    operator std::string() const { return address; }
 
     /**
      * @brief Equality comparison operator.

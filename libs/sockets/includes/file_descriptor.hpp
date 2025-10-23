@@ -1,3 +1,113 @@
+/**
+ * @file file_descriptor.hpp
+ * @brief Cross-platform file descriptor/socket handle wrapper with RAII.
+ *
+ * This file provides the file_descriptor class, a type-safe, move-only wrapper
+ * around platform-specific file descriptors (Unix/Linux) and socket handles (Windows).
+ * It abstracts the platform differences and provides consistent RAII-based resource
+ * management across all supported platforms.
+ *
+ * @section platforms Platform-Specific Details
+ *
+ * **Windows (Win32/Win64/Cygwin):**
+ * - Uses SOCKET type (unsigned int typedef)
+ * - Invalid value: INVALID_SOCKET (typically ~0)
+ * - Requires Winsock2 library
+ * - Socket handles are kernel objects
+ * - Type defined via winsock2.h
+ *
+ * **Unix/Linux/POSIX:**
+ * - Uses int type (signed integer)
+ * - Invalid value: -1
+ * - File descriptors are process-local integers
+ * - Same type for files, sockets, pipes, etc.
+ * - Type defined via sys/types.h
+
+ * @section usage Common Usage Patterns
+ *
+ * **Basic Construction:**
+ * @code
+ * #include "file_descriptor.hpp"
+ * using namespace cppress::sockets;
+ *
+ * // Create from raw socket handle
+ * int raw_fd = socket(AF_INET, SOCK_STREAM, 0);
+ * file_descriptor fd(raw_fd);
+ *
+ * // Check validity
+ * if (fd.is_valid()) {
+ *     // Use file descriptor
+ * }
+ *
+ * // Use explicit bool conversion
+ * if (fd) {
+ *     // File descriptor is valid
+ * }
+ * @endcode
+ *
+ * **Accessing Raw Handle:**
+ * @code
+ * file_descriptor fd(raw_socket);
+ *
+ * // Get raw handle for system calls
+ * int raw = fd.native_handle();
+ *
+ * // Use with read/write
+ * char buffer[1024];
+ * ssize_t n = read(fd.native_handle(), buffer, sizeof(buffer));
+ *
+ * // Use with send/recv
+ * send(fd.native_handle(), data, size, 0);
+ * @endcode
+ *
+ * **Move Semantics:**
+ * @code
+ * // File descriptors are move-only
+ * file_descriptor fd1(socket_handle);
+ * file_descriptor fd2 = std::move(fd1);
+ * // fd1 is now invalid, only fd2 owns the resource
+ *
+ * // Move assignment
+ * file_descriptor fd3(another_handle);
+ * fd3 = std::move(fd2);
+ * // fd2 is now invalid
+ * @endcode
+ *
+ * **Validation and State:**
+ * @code
+ * file_descriptor fd;  // Default: invalid
+ *
+ * // Check if valid
+ * if (!fd.is_valid()) {
+ *     std::cout << "Descriptor is invalid\n";
+ * }
+ *
+ * // Invalidate explicitly
+ * fd.invalidate();
+ * assert(!fd.is_valid());
+ * @endcode
+ * **Integration with Socket Class:**
+ * @code
+ * class socket {
+ *     file_descriptor fd;  // Platform-agnostic storage
+ * public:
+ *     socket() {
+ *         int raw = ::socket(AF_INET, SOCK_STREAM, 0);
+ *         fd = file_descriptor(raw);
+ *     }
+ *
+ *     int native_handle() const {
+ *         return fd.native_handle();
+ *     }
+ * };
+ * @endcode
+ *
+ *
+ *
+ * @author Hamza Mohammed Hassanain
+ * @version 1.0
+ */
+
 #pragma once
 
 #include <iostream>
@@ -118,18 +228,45 @@ public:
     }
 
     /**
-     * @brief Get the raw socket/file descriptor value.
+     * @brief Get the raw socket/file descriptor value (STL-style accessor).
      * @return Raw socket handle or file descriptor as integer
      *
      * Returns the underlying platform-specific socket handle or file descriptor.
      * This value can be used directly with system calls like send(), recv(),
      * read(), write(), etc.
      *
+     * This follows the STL convention used by classes like std::thread::native_handle()
+     * and std::mutex::native_handle().
+     *
      * @warning The returned value should be used carefully in cross-platform code
      *          due to type differences between Windows and Unix systems
      * @note If the descriptor is invalid, returns INVALID_SOCKET_VALUE
      */
-    int get() const { return fd; }
+    int native_handle() const { return fd; }
+
+    /**
+     * @brief Legacy accessor for backward compatibility.
+     * @deprecated Use native_handle() instead
+     * @return Raw socket handle or file descriptor as integer
+     */
+    [[deprecated("Use native_handle() instead")]]
+    int get() const {
+        return native_handle();
+    }
+
+    /**
+     * @brief Check if the descriptor is valid (explicit bool conversion).
+     * @return true if the descriptor holds a valid value, false otherwise
+     *
+     * Allows using file_descriptor in boolean contexts:
+     * @code
+     * file_descriptor fd = ...;
+     * if (fd) { // Checks if valid
+     *     // Use fd
+     * }
+     * @endcode
+     */
+    explicit operator bool() const { return fd != INVALID_SOCKET_VALUE; }
 
     /**
      * @brief Check if the descriptor is valid.
@@ -189,7 +326,7 @@ public:
      */
     friend std::ostream& operator<<(std::ostream& os, const file_descriptor& fd) {
         if (fd.is_valid()) {
-            os << fd.get();
+            os << fd.native_handle();
         } else {
             os << "INVALID_FILE_DESCRIPTOR";  // Indicate invalid state
         }

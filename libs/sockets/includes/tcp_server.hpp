@@ -19,7 +19,6 @@
  * @note This file only describes the interface. Concrete implementations
  *       must implement the pure virtual members defined below.
  *
- * @copyright Copyright (c) 2025
  */
 
 #include "connection.hpp"

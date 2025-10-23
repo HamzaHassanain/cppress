@@ -1,3 +1,115 @@
+/**
+ * @file family.hpp
+ * @brief Type-safe address family wrapper with validation.
+ *
+ * This file provides the family class, a validated wrapper around socket address
+ * family constants (AF_INET, AF_INET6). It ensures only supported address families
+ * are used and prevents accidental misuse of raw integer values in network operations.
+ * **Creating Address Families:**
+ * @code
+ * #include "family.hpp"
+ * using namespace cppress::sockets;
+ *
+ * // IPv4 (most common)
+ * family ipv4(IPV4);  // IPV4 = AF_INET
+ *
+ * // IPv6
+ * family ipv6(IPV6);  // IPV6 = AF_INET6
+ *
+ * // Default construction (IPv4)
+ * family default_family;  // Defaults to IPv4
+ *
+ * // Invalid family
+ * try {
+ *     family invalid(999);  // Throws socket_exception
+ * } catch (const socket_exception& e) {
+ *     std::cerr << "Invalid family: " << e.what() << "\n";
+ * }
+ * @endcode
+ *
+ * **Accessing Family Value:**
+ * @code
+ * family f(IPV4);
+ *
+ * // STL-style accessor
+ * int family_id = f.value();
+ * std::cout << "Family: " << family_id << "\n";
+ *
+ * // Implicit conversion
+ * int id = f;
+ *
+ * // Use in system calls
+ * int sock = socket(f, SOCK_STREAM, 0);
+ * @endcode
+ *
+ * **Integration with socket_address:**
+ * @code
+ * #include "socket_address.hpp"
+ *
+ * // IPv4 address
+ * socket_address ipv4_addr(
+ *     port(8080),
+ *     ip_address("192.168.1.1"),
+ *     family(IPV4)
+ * );
+ *
+ * // IPv6 address
+ * socket_address ipv6_addr(
+ *     port(8080),
+ *     ip_address("::1"),
+ *     family(IPV6)
+ * );
+ *
+ * // Extract family from socket address
+ * family f = ipv4_addr.family();
+ * if (f == family(IPV4)) {
+ *     std::cout << "IPv4 address\n";
+ * }
+ * @endcode
+ *
+ *
+ * **Socket Creation with Family:**
+ * @code
+ * family f(IPV4);
+ *
+ * // Create TCP socket
+ * int tcp_sock = socket(f.value(), SOCK_STREAM, 0);
+ *
+ * // Create UDP socket
+ * int udp_sock = socket(f.value(), SOCK_DGRAM, 0);
+ *
+ * // Using implicit conversion
+ * int sock = socket(f, SOCK_STREAM, 0);
+ * @endcode
+ *
+ * **Determining Address Family:**
+ * @code
+ * void process_address(const socket_address& addr) {
+ *     family f = addr.family();
+ *
+ *     if (f == family(IPV4)) {
+ *         std::cout << "Processing IPv4 address\n";
+ *         // IPv4-specific logic
+ *     } else if (f == family(IPV6)) {
+ *         std::cout << "Processing IPv6 address\n";
+ *         // IPv6-specific logic
+ *     }
+ * }
+ * @endcode
+
+ * @section integration Integration with Sockets Library
+ * The family class integrates with other cppress::sockets components:
+ * - Component of socket_address (IP/port/family triplet)
+ * - Used by socket creation (socket(), bind(), connect())
+ * - Determines sockaddr structure type (sockaddr_in vs sockaddr_in6)
+ * - Validated automatically at construction
+ * - Used by utility functions for address conversion
+ *
+
+ * @author Hamza Mohammed Hassanain
+ * @version 1.0
+ */
+
 #pragma once
 
 #include <algorithm>
@@ -80,10 +192,31 @@ public:
     family& operator=(family&& other) = default;  //  for move assignment
 
     /**
-     * @brief Get the raw address family value.
+     * @brief Get the raw address family value (STL-style accessor).
      * @return Integer value representing the address family (AF_INET, AF_INET6, etc.)
+     *
+     * Returns the stored address family constant. This follows STL conventions
+     * for value-type accessors like std::optional::value().
      */
-    int get() const { return family_id; }
+    int value() const { return family_id; }
+
+    /**
+     * @brief Legacy accessor for backward compatibility.
+     * @deprecated Use value() instead
+     * @return Integer value representing the address family
+     */
+    [[deprecated("Use value() instead")]]
+    int get() const {
+        return value();
+    }
+
+    /**
+     * @brief Implicit conversion to int for convenience.
+     * @return Address family constant as integer
+     *
+     * Allows using family objects directly where integers are expected.
+     */
+    operator int() const { return family_id; }
 
     /**
      * @brief Equality comparison operator.
@@ -116,6 +249,12 @@ public:
         os << f.family_id;
         return os;
     }
+    /**
+     * @brief Get the IPv4 address family constant.
+     * @return int  the IPv4 address family constant
+     */
+    static family ipv4() { return family(IPV4); }
+    static family ipv6() { return family(IPV6); }
 
     /// Default destructor
     ~family() = default;

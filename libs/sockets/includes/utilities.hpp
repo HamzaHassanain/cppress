@@ -1,3 +1,93 @@
+/**
+ * @file utilities.hpp
+ * @brief Cross-platform socket utility functions and constants.
+ *
+ * This file provides a comprehensive set of utility functions, constants, and
+ * type definitions for cross-platform socket programming. It abstracts platform
+ * differences between Windows (Winsock) and Unix/Linux (POSIX sockets) and
+ * provides common operations for network programming.
+ *
+ * @section constants Network Constants
+ *
+ * **Address Families:**
+ * @code
+ * const int IPV4 = AF_INET;      // IPv4 (value: 2)
+ * const int IPV6 = AF_INET6;     // IPv6 (value: varies by platform)
+ * @endcode
+ *
+ * **Port Ranges:**
+ * @code
+ * const int MIN_PORT = 1024;     // Minimum non-privileged port
+ * const int MAX_PORT = 65535;    // Maximum valid port
+ * @endcode
+ *
+ * **Buffer Sizes:**
+ * @code
+ * const size_t DEFAULT_BUFFER_SIZE = 4096;   // 4 KB default
+ * const size_t MAX_BUFFER_SIZE = 65536;      // 64 KB maximum
+ * @endcode
+ *
+ * **Timeouts (milliseconds):**
+ * @code
+ * const int DEFAULT_TIMEOUT = 5000;          // 5 seconds
+ * const int CONNECT_TIMEOUT = 10000;         // 10 seconds
+ * const int RECV_TIMEOUT = 10000;            // 10 seconds
+ * @endcode
+ *
+ * @endcode
+ *
+ * @section Platform Initialization (Windows)
+ * @code
+ * #include "utilities.hpp"
+ * using namespace cppress::sockets;
+ *
+ * // Initialize Winsock (Windows only, no-op on Unix)
+ * if (!initialize_socket_library()) {
+ *     std::cerr << "Failed to initialize sockets\n";
+ *     return 1;
+ * }
+ *
+ * // ... use sockets ...
+ *
+ * // Cleanup (Windows only, no-op on Unix)
+ * cleanup_socket_library();
+ * @endcode
+ *
+ * @section functions Function Categories
+ *
+ * **Initialization Functions:**
+ * - initialize_socket_library(): Initialize Winsock (Windows)
+ * - cleanup_socket_library(): Cleanup Winsock (Windows)
+ *
+ * **Address Conversion Functions:**
+ * - convert_ip_address_to_network_order(): String to binary
+ * - get_ip_address_from_network_address(): Binary to string
+ *
+ * **Byte Order Functions:**
+ * - convert_host_to_network_order(): htons() wrapper
+ * - convert_network_order_to_host(): ntohs() wrapper
+ *
+ * **Port Functions:**
+ * - get_random_free_port(): Find available port
+ * - is_valid_port(): Validate port range
+ * - is_free_port(): Check port availability
+ *
+ * **Socket Functions:**
+ * - close_socket(): Close socket handle
+ * - is_valid_socket(): Check socket validity
+ * - is_socket_open(): Check if socket is open
+ * - is_socket_connected(): Check connection state
+ *
+ * **Utility Functions:**
+ * - get_error_message(): Get last error description
+ * - to_upper_case(): Convert string to uppercase
+ * - make_listener_socket(): Create listening socket
+ *
+
+ * @author Hamza Mohammed Hassanain
+ * @version 1.0
+ */
+
 #pragma once
 
 #include <chrono>
@@ -60,17 +150,6 @@ const int RECV_TIMEOUT = 10000;     ///< Receive operation timeout
 
 // Socket queue constants
 const int DEFAULT_LISTEN_BACKLOG = SOMAXCONN;  ///< Default listen queue size for servers
-
-/**
- * @brief Network protocol enumeration.
- *
- * Maps high-level protocol types to their corresponding socket types.
- * Used for socket creation and configuration.
- */
-enum class Protocol {
-    TCP = SOCK_STREAM,  ///< Transmission Control Protocol (reliable, connection-oriented)
-    UDP = SOCK_DGRAM    ///< User Datagram Protocol (unreliable, connectionless)
-};
 
 /// Standard line terminator character for text protocols
 const char NEW_LINE = '\n';

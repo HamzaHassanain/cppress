@@ -61,7 +61,7 @@ void epoll_server::try_accept() {
 #if defined(__linux__) || defined(__linux)
             // Use accept4 for efficiency (sets NONBLOCK + CLOEXEC atomically)
             auto cfd =
-                ::accept4(listener_socket->get_fd(), reinterpret_cast<sockaddr*>(&client_addr),
+                ::accept4(listener_socket->native_handle(), reinterpret_cast<sockaddr*>(&client_addr),
                           &client_addr_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
             if (cfd < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -72,7 +72,7 @@ void epoll_server::try_accept() {
             // Fallback windows implementation
 
             // Fallback Unix implementation
-            int cfd = ::accept(listener_socket->get_fd(), reinterpret_cast<sockaddr*>(&client_addr),
+            int cfd = ::accept(listener_socket->native_handle(), reinterpret_cast<sockaddr*>(&client_addr),
                                &client_addr_len);
             if (cfd < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -118,7 +118,7 @@ void epoll_server::try_read(epoll_connection& c) {
     try {
         char buf[64 * 1024];  // 64KB buffer for high throughput
         std::size_t sz = 64 * 1024;
-        int fd = c.conn->get_fd();
+        int fd = c.conn->native_handle();
         // Read as much data as possible (edge-triggered)
         while (!c.want_close) {
             std::size_t m = ::recv(fd, buf, sz, 0);
@@ -230,7 +230,7 @@ bool epoll_server::flush_writes(epoll_connection& c) {
                 c.outq.pop_front();
                 continue;
             }
-            std::size_t n = ::send(c.conn->get_fd(), front.data(), front.size(), 0);
+            std::size_t n = ::send(c.conn->native_handle(), front.data(), front.size(), 0);
             if (n > 0) {
                 front.erase(0, (size_t)n);
                 continue;
@@ -300,7 +300,7 @@ void epoll_server::epoll_loop(int timeout) {
                 int fd = events[i].data.fd;
 
                 // Handle new connections on listener socket
-                if (listener_socket && fd == listener_socket->get_fd()) {
+                if (listener_socket && fd == listener_socket->native_handle()) {
                     try_accept();
                     continue;
                 }
@@ -385,8 +385,8 @@ void epoll_server::epoll_loop(int timeout) {
  * - Thread-safe approach via epoll signaling mechanism
  */
 void epoll_server::close_connection(std::shared_ptr<connection> conn) {
-    auto c = conns.find(conn->get_fd());
-    int fd = conn->get_fd();
+    auto c = conns.find(conn->native_handle());
+    int fd = conn->native_handle();
     if (c == conns.end())
         return;  // Connection already closed
     conns[fd].want_close = true;
@@ -394,7 +394,7 @@ void epoll_server::close_connection(std::shared_ptr<connection> conn) {
 }
 
 void epoll_server::stop_reading_from_connection(std::shared_ptr<connection> conn) {
-    auto c = conns.find(conn->get_fd());
+    auto c = conns.find(conn->native_handle());
     if (c != conns.end()) {
         c->second.want_close = true;
     }
@@ -427,7 +427,7 @@ void epoll_server::close_connection(int fd) {
  * - Maintains message ordering per connection
  */
 void epoll_server::send_message(std::shared_ptr<connection> conn, const data_buffer& db) {
-    int fd = conn->get_fd();
+    int fd = conn->native_handle();
     auto it = conns.find(fd);
     if (it == conns.end()) {
         return;  // Connection not found
@@ -456,12 +456,12 @@ void epoll_server::on_exception_occurred(const std::exception& e) {
 
 void epoll_server::on_connection_opened(std::shared_ptr<connection> conn) {
     std::cout << "Client Connected:\n";
-    std::cout << "\t Client " << conn->get_fd() << " connected." << std::endl;
+    std::cout << "\t Client " << conn->native_handle() << " connected." << std::endl;
 }
 
 void epoll_server::on_connection_closed(std::shared_ptr<connection> conn) {
     std::cout << "Client Disconnected:\n";
-    std::cout << "\t Client " << conn->get_fd() << " disconnected." << std::endl;
+    std::cout << "\t Client " << conn->native_handle() << " disconnected." << std::endl;
 }
 
 /**
@@ -477,7 +477,7 @@ void epoll_server::on_connection_closed(std::shared_ptr<connection> conn) {
  * - Connection lifetime managed by shared_ptr reference counting
  */
 void epoll_server::on_message_received(std::shared_ptr<connection> conn, const data_buffer& db) {
-    std::cout << "Message Received from " << conn->get_fd() << ": " << db.to_string() << std::endl;
+    std::cout << "Message Received from " << conn->native_handle() << ": " << db.to_string() << std::endl;
     std::string message = "Echo " + db.to_string();
 
     if (db.to_string() == "close\n")
@@ -494,7 +494,7 @@ void epoll_server::on_message_received(std::shared_ptr<connection> conn, const d
  * - Initializing background tasks
  */
 void epoll_server::on_listen_success() {
-    std::cout << "Listening on " << listener_socket->get_fd() << std::endl;
+    std::cout << "Listening on " << listener_socket->native_handle() << std::endl;
 }
 
 /**
@@ -563,7 +563,7 @@ void epoll_server::listen(int timeout) {
  */
 bool epoll_server::register_listener_socket(std::shared_ptr<socket> sock_ptr) {
     listener_socket = sock_ptr;
-    int lfd = sock_ptr->get_fd();
+    int lfd = sock_ptr->native_handle();
     if (add_epoll(lfd, EPOLLIN | EPOLLET) != 0) {
         return false;
     }
@@ -592,7 +592,7 @@ epoll_server::~epoll_server() {
     for (auto& [fd, _] : conns)
         close_socket(fd);
     if (listener_socket)
-        close_socket(listener_socket->get_fd());
+        close_socket(listener_socket->native_handle());
 #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
     // hell nothing;
 #else

@@ -13,7 +13,7 @@ public:
 
 protected:
     void on_connection_opened(std::shared_ptr<cppress::sockets::connection> conn) override {
-        std::cout << "Client connected from: " << conn->get_remote_address().to_string()
+        std::cout << "Client connected from: " << conn->remote_endpoint().to_string()
                   << std::endl;
     }
 
@@ -26,7 +26,7 @@ protected:
     }
 
     void on_connection_closed(std::shared_ptr<cppress::sockets::connection> conn) override {
-        std::cout << "Client disconnected: " << conn->get_remote_address().to_string() << std::endl;
+        std::cout << "Client disconnected: " << conn->remote_endpoint().to_string() << std::endl;
     }
 
     void on_exception_occurred(const std::exception& e) override {
