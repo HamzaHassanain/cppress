@@ -178,4 +178,4 @@ public:
     bool operator!=(bool rhs) const noexcept { return value != rhs; }
 };
 
-}  // namespace cppress
+}  // namespace cppress::json

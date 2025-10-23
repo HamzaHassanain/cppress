@@ -277,6 +277,7 @@ public:
     /**
      * @brief Create and bind socket to address.
      * @param socket_type Network socket_type (TCP/UDP)
+     * @note Does not bind socket - user must call bind() separately
      * @throws socket_exception with type "SocketCreation" if socket creation fails
      */
     explicit socket(const type& socket_type);
@@ -295,7 +296,7 @@ public:
      * @brief Create and bind socket to address.
      * @param addr Socket address to bind to
      * @param socket_type Network socket_type (TCP/UDP)
-     * @note Automatically binds socket to the specified address.
+     * @note Does not bind socket - user must call bind() separately
      * @throws socket_exception with type "SocketCreation" if socket creation fails
      * @throws socket_exception with type "SocketBinding" if binding fails
      */
@@ -345,6 +346,13 @@ public:
     void set_reuse_address(bool reuse);
 
     /**
+     * @brief Set the SO_REUSEPORT socket option.
+     * @param reuse Whether to enable port reuse
+     * @throw socket_exception with type "SocketOption" if setsockopt fails
+     */
+    void set_reuse_port(bool reuse);
+
+    /**
      * @brief Sets socket to non-blocking or blocking mode.
      * @param enable Whether to enable non-blocking mode
      * @throws socket_exception with type "SocketOption" if operation fails
@@ -375,7 +383,6 @@ public:
      *  that prevents the file descriptor from being inherited by child processes.
      * @param enable Whether to enable close-on-exec
      */
-
     void set_close_on_exec(bool enable);
 
     /**
@@ -497,6 +504,17 @@ public:
      * @param optval The value to set the option to
      */
     void set_option(int level, int optname, int optval);
+
+    /**
+     * @brief Establish a connection to a remote socket.
+     *
+     * @param addr The address of the remote socket
+     * @param NON_BLOCKING If true, use non-blocking connect
+     * @return std::shared_ptr<connection>
+     * @warning This method leaves the socket in an INVALID State, so cannot be used for further
+     * operations. use the newly created connection
+     */
+    std::shared_ptr<connection> connect(const socket_address& addr, bool NON_BLOCKING = false);
 
     bool operator<(const socket& other) const { return fd < other.fd; }
 

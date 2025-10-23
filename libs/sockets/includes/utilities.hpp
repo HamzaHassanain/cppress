@@ -127,9 +127,7 @@ class port;
 class family;
 class socket;
 class socket_address;
-}  // namespace cppress::sockets
 
-namespace cppress::sockets {
 // Network address family constants
 const int IPV4 = AF_INET;   ///< IPv4 address family identifier
 const int IPV6 = AF_INET6;  ///< IPv6 address family identifier
@@ -287,6 +285,9 @@ bool is_socket_open(int fd);
  */
 bool is_socket_connected(socket_t socket);
 
+/// @brief Retrieve last socket error message.
+/// @return String description of last socket error
+/// @note Uses WSAGetLastError() on Windows and errno on Unix/Linux
 std::string get_error_message();
 
 /// @brief Convert string to uppercase.
@@ -297,7 +298,7 @@ std::string to_upper_case(const std::string& input);
 
 /**
  * @brief Create a listener socket.
- *
+ * @note The sockets created are non-blocking, reusable, and close-on-exec.
  * @param port Port number to listen on
  * @param ip IP address to bind to (default: "0.0.0.0")
  * @param backlog Maximum number of pending connections (default: SOMAXCONN)

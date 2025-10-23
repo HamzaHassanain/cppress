@@ -19,10 +19,6 @@
 
 using namespace cppress::sockets;
 
-/**
- * @test Test socket bind, listen, and accept operations
- * Verifies basic server socket functionality
- */
 TEST(SocketTest, BindListenAccept) {
     initialize_socket_library();
 
@@ -45,7 +41,7 @@ TEST(SocketTest, BindListenAccept) {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     connection client_conn;
-    EXPECT_NO_THROW(client_conn.connect());
+    EXPECT_NO_THROW(client_conn.connect(addr));
 
     server_thread.join();
     EXPECT_TRUE(connection_accepted);
@@ -53,14 +49,9 @@ TEST(SocketTest, BindListenAccept) {
     cleanup_socket_library();
 }
 
-/**
- * @test Test socket connect operation
- * Verifies client socket can connect to server
- */
 TEST(SocketTest, ConnectOperation) {
     initialize_socket_library();
 
-    // Create server
     cppress::sockets::socket server_sock(family::ipv4(), socket::type::stream);
     socket_address server_addr(ip_address("127.0.0.1"), get_random_free_port(), family::ipv4());
     server_sock.bind(server_addr);
@@ -73,7 +64,6 @@ TEST(SocketTest, ConnectOperation) {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    // Create client and connect
     cppress::sockets::socket client_sock(family::ipv4(), socket::type::stream);
     EXPECT_TRUE(client_sock.is_open());
 
@@ -83,29 +73,21 @@ TEST(SocketTest, ConnectOperation) {
     cleanup_socket_library();
 }
 
-/**
- * @test Test socket close and is_open operations
- * Verifies socket state management
- */
 TEST(SocketTest, CloseAndIsOpen) {
     initialize_socket_library();
 
-    // Create socket
     cppress::sockets::socket sock(family::ipv4(), socket::type::stream);
     EXPECT_TRUE(sock.is_open());
 
-    // Test explicit operator bool
     if (sock) {
         EXPECT_TRUE(true);
     } else {
         FAIL() << "Socket should be open";
     }
 
-    // Close socket
     sock.close();
     EXPECT_FALSE(sock.is_open());
 
-    // Test operator bool after close
     if (!sock) {
         EXPECT_TRUE(true);
     } else {
@@ -115,14 +97,9 @@ TEST(SocketTest, CloseAndIsOpen) {
     cleanup_socket_library();
 }
 
-/**
- * @test MULTITHREADING: Test multiple clients connecting simultaneously
- * Verifies thread safety for concurrent connections
- */
 TEST(SocketTest, MultithreadedMultipleSimultaneousConnections) {
     initialize_socket_library();
 
-    // Create server socket
     cppress::sockets::socket server_sock(family::ipv4(), socket::type::stream);
     socket_address server_addr(ip_address("127.0.0.1"), get_random_free_port(), family::ipv4());
     server_sock.bind(server_addr);
@@ -132,7 +109,6 @@ TEST(SocketTest, MultithreadedMultipleSimultaneousConnections) {
     std::atomic<int> accepted_connections{0};
     std::atomic<int> successful_connects{0};
 
-    // Server thread accepting multiple connections
     std::thread server_thread([&]() {
         std::vector<std::thread> handler_threads;
 
@@ -141,17 +117,14 @@ TEST(SocketTest, MultithreadedMultipleSimultaneousConnections) {
                 std::shared_ptr<connection> conn = server_sock.accept();
                 accepted_connections++;
 
-                // Handle connection in separate thread
                 handler_threads.emplace_back([conn = std::move(conn)]() mutable {
                     try {
                         data_buffer data = conn->read();
                         conn->write(data);  // Echo back
                     } catch (...) {
-                        // Handler failed
                     }
                 });
             } catch (...) {
-                // Accept failed
                 break;
             }
         }
@@ -162,7 +135,6 @@ TEST(SocketTest, MultithreadedMultipleSimultaneousConnections) {
         }
     });
 
-    // Give server time to start
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Launch multiple client threads
@@ -172,11 +144,10 @@ TEST(SocketTest, MultithreadedMultipleSimultaneousConnections) {
             try {
                 connection conn(server_addr);
 
-                // Send and receive data
                 std::string message = "Client " + std::to_string(i);
-                conn.send(data_buffer(message));
+                conn.write(data_buffer(message));
 
-                data_buffer response = conn.receive();
+                data_buffer response = conn.read();
                 if (response.to_string() == message) {
                     successful_connects++;
                 }
@@ -186,7 +157,6 @@ TEST(SocketTest, MultithreadedMultipleSimultaneousConnections) {
         });
     }
 
-    // Wait for all clients
     for (auto& t : client_threads) {
         if (t.joinable())
             t.join();
@@ -194,17 +164,12 @@ TEST(SocketTest, MultithreadedMultipleSimultaneousConnections) {
 
     server_thread.join();
 
-    // Verify all connections were successful
     EXPECT_EQ(accepted_connections.load(), NUM_CLIENTS);
     EXPECT_EQ(successful_connects.load(), NUM_CLIENTS);
 
     cleanup_socket_library();
 }
 
-/**
- * @test MULTITHREADING: Test socket thread safety with concurrent operations
- * Verifies that sockets can be safely used across threads
- */
 TEST(SocketTest, MultithreadedSocketOperationsThreadSafety) {
     initialize_socket_library();
 
@@ -215,44 +180,39 @@ TEST(SocketTest, MultithreadedSocketOperationsThreadSafety) {
     std::vector<std::thread> client_threads;
     std::vector<port> server_ports;
 
-    // Create multiple servers on different ports
     for (int i = 0; i < NUM_SERVERS; ++i) {
         port p = get_random_free_port();
         server_ports.push_back(p);
 
         server_threads.emplace_back([p, &servers_started, &clients_connected]() {
             try {
-                socket server_sock(family::ipv4(), socket::type::stream);
+                cppress::sockets::socket server_sock(family::ipv4(), socket::type::stream);
                 socket_address addr(ip_address("127.0.0.1"), p, family::ipv4());
                 server_sock.bind(addr);
                 server_sock.listen();
                 servers_started++;
 
-                // Accept one connection
-                connection conn = server_sock.accept();
-                data_buffer data = conn.read();
-                conn.write(data);  // Echo
+                auto conn = server_sock.accept();
+                data_buffer data = conn->read();
+                conn->write(data);  // Echo
             } catch (...) {
-                // Server failed
             }
         });
     }
 
-    // Wait for all servers to start
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    // Create clients to connect to each server
     for (int i = 0; i < NUM_SERVERS; ++i) {
         client_threads.emplace_back([&server_ports, i, &clients_connected]() {
             try {
-                socket client_sock(family::ipv4(), socket::type::stream);
+                cppress::sockets::socket client_sock(family::ipv4(), socket::type::stream);
                 socket_address addr(ip_address("127.0.0.1"), server_ports[i], family::ipv4());
-                client_sock.connect(addr);
+                auto conn = client_sock.connect(addr);
 
                 std::string message = "Thread " + std::to_string(i);
-                client_sock.send(data_buffer(message));
+                conn->write(data_buffer(message));
 
-                data_buffer response = client_sock.receive();
+                data_buffer response = conn->read();
                 if (response.to_string() == message) {
                     clients_connected++;
                 }
@@ -262,7 +222,6 @@ TEST(SocketTest, MultithreadedSocketOperationsThreadSafety) {
         });
     }
 
-    // Wait for completion
     for (auto& t : server_threads) {
         if (t.joinable())
             t.join();

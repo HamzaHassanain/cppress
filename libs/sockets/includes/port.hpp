@@ -144,18 +144,6 @@ public:
     }
 
     /**
-     * @brief Implicit conversion to int for convenience.
-     * @return Port number as integer
-     *
-     * Allows using port objects directly where integers are expected:
-     * @code
-     * port p(8080);
-     * int port_num = p; // Implicit conversion
-     * @endcode
-     */
-    operator int() const { return port_id; }
-
-    /**
      * @brief Equality comparison operator.
      * @param other Port to compare with
      * @return true if port numbers are equal
@@ -186,6 +174,19 @@ public:
         os << p.port_id;
         return os;
     }
+
+    /**
+     * @brief explicit conversion numeric types
+     */
+    int to_int() const noexcept { return port_id; }
+    /**
+     * @brief explicit conversion numeric types
+     */
+    long to_long() const noexcept { return static_cast<long>(port_id); }
+    /**
+     * @brief explicit conversion numeric types
+     */
+    double to_double() const noexcept { return static_cast<double>(port_id); }
 
     /// Default destructor
     ~port() = default;

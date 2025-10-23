@@ -14,6 +14,14 @@ socket_address::socket_address(const cppress::sockets::port& port_id, const ip_a
     handle_ipv6(this, address, port_id, family_id);
 }
 
+socket_address::socket_address(const cppress::sockets::ip_address& address,
+                               const cppress::sockets::port& port_id,
+                               const cppress::sockets::family& family_id)
+    : address_(address), family_(family_id), port_(port_id) {
+    handle_ipv4(this, address, port_id, family_id);
+    handle_ipv6(this, address, port_id, family_id);
+}
+
 socket_address::socket_address(sockaddr_storage& addr) {
     // Check utility functions, to know about the internal implementations
     // If the IP family is IPv4

@@ -40,7 +40,7 @@
  * try {
  *     std::size_t bytes_sent = conn->write(request);
  *     std::cout << "Sent " << bytes_sent << " bytes\n";
- * } catch (const socket_exception& e) {
+ * } catch (socket_exception& e) {
  *     std::cerr << "Send failed: " << e.what() << "\n";
  * }
  * @endcode

@@ -168,16 +168,12 @@ public:
     }
 
     /**
-     * @brief Implicit conversion to string for convenience.
+     * @brief Explicit conversion to string for convenience.
      * @return Copy of the IP address string
      *
      * Allows using ip_address objects directly where strings are expected:
-     * @code
-     * ip_address addr("127.0.0.1");
-     * std::string str = addr; // Implicit conversion
-     * @endcode
      */
-    operator std::string() const { return address; }
+    std::string to_string() const { return address; }
 
     /**
      * @brief Equality comparison operator.

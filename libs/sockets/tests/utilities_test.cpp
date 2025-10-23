@@ -3,14 +3,19 @@
  * @brief Unit tests for socket utility functions
  */
 
+#include "includes/utilities.hpp"
+
 #include <gtest/gtest.h>
 
 #include <cstring>
+#include <memory>
+#include <thread>
 
 #include "includes/family.hpp"
 #include "includes/ip_address.hpp"
 #include "includes/port.hpp"
-#include "includes/utilities.hpp"
+#include "includes/socket.hpp"
+#include "includes/socket_address.hpp"
 
 using namespace cppress::sockets;
 
@@ -291,4 +296,100 @@ TEST(UtilitiesTest, IsSocketOpen_ClosedSocket) {
     // After closing, socket should not be open
     // Note: This may be platform-dependent
     EXPECT_FALSE(is_socket_open(sock));
+}
+
+// ============================================================================
+// Tests for make_listener_socket
+// ============================================================================
+TEST(UtilitiesTest, MakeListenerSocket_ValidParameters) {
+    initialize_socket_library();
+    port p = get_random_free_port();
+
+    const int NUM_SOCKETS = 4;
+
+    std::vector<std::shared_ptr<cppress::sockets::socket>> listener_sockets;
+    for (int i = 0; i < NUM_SOCKETS; ++i) {
+        auto listener = make_listener_socket(p.to_int(), "0.0.0.0");
+        listener_sockets.push_back(listener);
+    }
+
+    for (const auto& listener : listener_sockets) {
+        EXPECT_TRUE(listener->is_open());
+    }
+}
+
+// ============================================================================
+// Tests for make_listener_socket
+// ============================================================================
+TEST(UtilitiesTest, MakeListenerSocket_TestAbilityToMakeConnectionsMultithreading) {
+    initialize_socket_library();
+    port p = get_random_free_port();
+
+    const int NUM_SOCKETS = 4;
+
+    std::vector<std::shared_ptr<cppress::sockets::socket>> listener_sockets;
+    for (int i = 0; i < NUM_SOCKETS; ++i) {
+        auto listener = make_listener_socket(p.to_int(), "0.0.0.0");
+        listener_sockets.push_back(listener);
+    }
+
+    for (const auto& listener : listener_sockets) {
+        EXPECT_TRUE(listener->is_open());
+    }
+    // each thread has a socket
+
+    std::vector<std::thread> listener_threads;
+    std::atomic<int> successful_connections{0};
+
+    for (const auto& listener : listener_sockets) {
+        listener_threads.emplace_back([&listener, &successful_connections]() {
+            while (true) {
+                try {
+                    auto conn = listener->accept(true);
+                    if (conn && conn->is_open()) {
+                        successful_connections++;
+                    } else
+                        continue;
+                    auto msg = conn->read();
+                    auto thread_id = std::this_thread::get_id();
+                    std::cout << "Thread " << thread_id << " received message: " << msg.to_string()
+                              << std::endl;
+                    conn->write(msg);  // Echo back
+                    break;
+
+                } catch (...) {
+                    // Connection failed
+                    break;
+                }
+            }
+        });
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    // create 4 thread clients to connect to the listeners
+
+    std::vector<std::thread> client_threads;
+    for (int i = 0; i < NUM_SOCKETS; ++i) {
+        client_threads.emplace_back([p]() {
+            try {
+                socket_address server_addr(ip_address("127.0.0.1"), p);
+                cppress::sockets::socket client_socket(cppress::sockets::socket::type::stream);
+                auto conn = client_socket.connect(server_addr, true);
+                conn->write(data_buffer("Hello from client"));
+                auto response = conn->read();
+                auto thread_id = std::this_thread::get_id();
+                std::cout << "Client Thread " << thread_id
+                          << " received echo: " << response.to_string() << std::endl;
+            } catch (...) {
+                // Connection failed
+            }
+        });
+    }
+
+    for (auto& thread : client_threads) {
+        thread.join();
+    }
+
+    EXPECT_EQ(successful_connections.load(), NUM_SOCKETS);
 }

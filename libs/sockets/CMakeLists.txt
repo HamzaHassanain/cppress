@@ -9,17 +9,31 @@ file(GLOB SOCKET_HEADERS includes/*.hpp)
 
 # Create library target
 if(SOCKET_STANDALONE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -fsanitize=address -g -O0")
     # Standalone executable for testing
     add_executable(sockets app.cpp ${SOCKET_SOURCES})
-    target_compile_options(sockets PRIVATE -g -O0)
+    # target_compile_options(sockets PRIVATE -Wall -Wextra -pedantic -fsanitize=address -g -O0)
+    
+    # Apply sanitizer flags if enabled
+    if(SANITIZER AND NOT WIN32 AND SANITIZER_FLAGS)
+        target_compile_options(sockets PRIVATE ${SANITIZER_FLAGS})
+        target_link_options(sockets PRIVATE ${SANITIZER_LINK_FLAGS})
+        message(STATUS "Applied sanitizer flags to standalone sockets executable")
+    endif()
 else()
     # Library mode
     add_library(sockets STATIC ${SOCKET_SOURCES})
     add_library(cppress::sockets ALIAS sockets)
     # Link to common dependencies
     target_link_libraries(sockets PUBLIC cppress_common)
+    
+    # Apply sanitizer flags if enabled
+    if(SANITIZER AND NOT WIN32 AND SANITIZER_FLAGS)
+        target_compile_options(sockets PUBLIC ${SANITIZER_FLAGS})
+        target_link_options(sockets PUBLIC ${SANITIZER_LINK_FLAGS})
+        message(STATUS "Applied sanitizer flags to sockets library")
+    endif()
 endif()
-
 
 # Include directories
 target_include_directories(sockets PUBLIC
@@ -51,7 +65,7 @@ if(NOT SOCKET_STANDALONE)
 endif()
 
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests AND NOT SOCKET_STANDALONE)
     enable_testing()
     add_subdirectory(tests)
 endif()

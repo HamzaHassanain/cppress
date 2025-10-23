@@ -211,14 +211,6 @@ public:
     }
 
     /**
-     * @brief Implicit conversion to int for convenience.
-     * @return Address family constant as integer
-     *
-     * Allows using family objects directly where integers are expected.
-     */
-    operator int() const { return family_id; }
-
-    /**
      * @brief Equality comparison operator.
      * @param other Family object to compare with
      * @return true if both objects have the same family ID
@@ -255,6 +247,19 @@ public:
      */
     static family ipv4() { return family(IPV4); }
     static family ipv6() { return family(IPV6); }
+
+    /**
+     * @brief explicit conversion numeric types
+     */
+    int to_int() const noexcept { return family_id; }
+    /**
+     * @brief explicit conversion numeric types
+     */
+    long to_long() const noexcept { return static_cast<long>(family_id); }
+    /**
+     * @brief explicit conversion numeric types
+     */
+    double to_double() const noexcept { return static_cast<double>(family_id); }
 
     /// Default destructor
     ~family() = default;

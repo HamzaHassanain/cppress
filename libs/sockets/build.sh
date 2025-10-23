@@ -14,6 +14,8 @@ if [ "$1" = "clean" ]; then
     rm -rf build
 fi
 
+
+
 # Create build directory if it doesn't exist
 mkdir -p build
 
@@ -33,5 +35,7 @@ echo "Executable location: build/sockets"
 # Optionally run the executable if 'run' argument is passed
 if [ "$1" = "run" ]; then
     echo "Running the application..."
+    # Set TSAN options to avoid memory mapping issues
+    export TSAN_OPTIONS="halt_on_error=0:force_seq_cst_atomics=1"
     ./build/sockets
 fi

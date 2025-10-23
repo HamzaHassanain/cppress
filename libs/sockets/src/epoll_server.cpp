@@ -230,7 +230,7 @@ bool epoll_server::flush_writes(epoll_connection& c) {
                 c.outq.pop_front();
                 continue;
             }
-            std::size_t n = ::send(c.conn->native_handle(), front.data(), front.size(), 0);
+            int n = ::send(c.conn->native_handle(), front.data(), front.size(), 0);
             if (n > 0) {
                 front.erase(0, (size_t)n);
                 continue;

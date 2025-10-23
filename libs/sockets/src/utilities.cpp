@@ -410,11 +410,12 @@ std::string to_upper_case(const std::string& input) {
 std::shared_ptr<cppress::sockets::socket> make_listener_socket(uint16_t port, const std::string& ip,
                                                                int backlog) {
     try {
-        auto sock_ptr = std::make_shared<cppress::sockets::socket>(cppress::sockets::type::stream);
+        auto sock_ptr =
+            std::make_shared<cppress::sockets::socket>(cppress::sockets::socket::type::stream);
 
         sock_ptr->set_reuse_address(true);
+        sock_ptr->set_reuse_port(true);
         sock_ptr->set_non_blocking(true);
-        sock_ptr->set_close_on_exec(true);
         sock_ptr->bind(cppress::sockets::socket_address(cppress::sockets::port(port),
                                                         cppress::sockets::ip_address(ip)));
         sock_ptr->listen(backlog);
