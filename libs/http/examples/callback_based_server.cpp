@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
-#include "../http-lib.hpp"
 
+#include "../http-lib.hpp"
 
 /**
  * @brief Examplet HTTP server using callback-based architecture
@@ -10,9 +10,9 @@
  * to handle HTTP requests without inheritance.
  */
 
-void handle_request(hh_http::http_request &request, hh_http::http_response &response)
-{
-    std::cout << "Received " << request.get_method() << " request for " << request.get_uri() << std::endl;
+void handle_request(cppress::http::http_request& request, cppress::http::http_response& response) {
+    std::cout << "Received " << request.get_method() << " request for " << request.get_uri()
+              << std::endl;
 
     // Set response headers
     response.set_version("HTTP/1.1");
@@ -23,8 +23,7 @@ void handle_request(hh_http::http_request &request, hh_http::http_response &resp
     // Route handling based on URI
     std::string uri = request.get_uri();
 
-    if (uri == "/" || uri == "/index")
-    {
+    if (uri == "/" || uri == "/index") {
         response.set_status(200, "OK");
         response.set_body(R"(
 <!DOCTYPE html>
@@ -54,15 +53,11 @@ void handle_request(hh_http::http_request &request, hh_http::http_response &resp
 </body>
 </html>
         )");
-    }
-    else if (uri == "/hello")
-    {
+    } else if (uri == "/hello") {
         response.set_status(200, "OK");
         response.add_header("Content-Type", "text/plain");
         response.set_body("Hello from callback-based HTTP server! 👋\n");
-    }
-    else if (uri == "/info")
-    {
+    } else if (uri == "/info") {
         response.set_status(200, "OK");
         response.add_header("Content-Type", "application/json");
 
@@ -80,9 +75,7 @@ void handle_request(hh_http::http_request &request, hh_http::http_response &resp
                            R"("
 })";
         response.set_body(info);
-    }
-    else if (uri == "/echo" && request.get_method() == "POST")
-    {
+    } else if (uri == "/echo" && request.get_method() == "POST") {
         response.set_status(200, "OK");
         response.add_header("Content-Type", "text/plain");
 
@@ -93,9 +86,7 @@ void handle_request(hh_http::http_request &request, hh_http::http_response &resp
         echo_response += "Body Content:\n" + request.get_body();
 
         response.set_body(echo_response);
-    }
-    else if (uri == "/headers")
-    {
+    } else if (uri == "/headers") {
         response.set_status(200, "OK");
         response.add_header("Content-Type", "text/plain");
 
@@ -105,15 +96,12 @@ void handle_request(hh_http::http_request &request, hh_http::http_response &resp
         headers_info += "Version: " + request.get_version() + "\n\n";
 
         auto headers = request.get_headers();
-        for (const auto &header : headers)
-        {
+        for (const auto& header : headers) {
             headers_info += header.first + ": " + header.second + "\n";
         }
 
         response.set_body(headers_info);
-    }
-    else
-    {
+    } else {
         // 404 Not Found
         response.set_status(404, "Not Found");
         response.add_header("Content-Type", "text/html");
@@ -135,51 +123,43 @@ void handle_request(hh_http::http_request &request, hh_http::http_response &resp
     response.send();
 }
 
-void on_client_connected(std::shared_ptr<hh_socket::connection> conn)
-{
+void on_client_connected(std::shared_ptr<cppress::socketsconnection> conn) {
     std::cout << "✅ Client connected from " << conn->get_remote_address().to_string() << std::endl;
 }
 
-void on_client_disconnected(std::shared_ptr<hh_socket::connection> conn)
-{
-    std::cout << "❌ Client disconnected from " << conn->get_remote_address().to_string() << std::endl;
+void on_client_disconnected(std::shared_ptr<cppress::socketsconnection> conn) {
+    std::cout << "❌ Client disconnected from " << conn->get_remote_address().to_string()
+              << std::endl;
 }
 
-void on_server_started()
-{
+void on_server_started() {
     std::cout << "🚀 Callback-based HTTP server started successfully!" << std::endl;
     std::cout << "📡 Server is listening on http://localhost:8080" << std::endl;
     std::cout << "🔄 Press Ctrl+C to stop the server" << std::endl;
 }
 
-void on_server_error(const std::exception &e)
-{
+void on_server_error(const std::exception& e) {
     std::cerr << "❌ Server error: " << e.what() << std::endl;
 }
 
-void on_waiting_for_activity()
-{
+void on_waiting_for_activity() {
     // This is called during idle periods - useful for periodic tasks
     static int counter = 0;
-    if (++counter % 10 == 0)
-    { // Print every 10 seconds
+    if (++counter % 10 == 0) {  // Print every 10 seconds
         std::cout << "💤 Server idle... waiting for connections" << std::endl;
     }
 }
 
-int main()
-{
-    try
-    {
-        if (!hh_socket::initialize_socket_library())
-        {
+int main() {
+    try {
+        if (!cppress::socketsinitialize_socket_library()) {
             std::cerr << "Failed to initialize socket library." << std::endl;
             return 1;
         }
         std::cout << "🔧 Starting callback-based HTTP server..." << std::endl;
 
         // Create HTTP server on port 8080
-        hh_http::http_server server(8080, "0.0.0.0", 1000);
+        cppress::http::http_server server(8080, "0.0.0.0", 1000);
 
         // Set up all the callbacks
         server.set_request_callback(handle_request);
@@ -191,13 +171,11 @@ int main()
 
         // Start the server (this will block)
         server.listen();
-    }
-    catch (const std::exception &e)
-    {
+    } catch (const std::exception& e) {
         std::cerr << "💥 Failed to start server: " << e.what() << std::endl;
         return 1;
     }
 
-    hh_socket::cleanup_socket_library();
+    cppress::socketscleanup_socket_library();
     return 0;
 }

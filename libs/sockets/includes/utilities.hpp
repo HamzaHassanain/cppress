@@ -80,7 +80,7 @@
  *
  * **Utility Functions:**
  * - get_error_message(): Get last error description
- * - to_upper_case(): Convert string to uppercase
+ * - to_uppercase(): Convert string to uppercase
  * - make_listener_socket(): Create listening socket
  *
 
@@ -294,7 +294,7 @@ std::string get_error_message();
 /// @param input String to convert
 /// @note does not modify the original string, returns a new uppercase string
 /// @return Uppercase version of input string
-std::string to_upper_case(const std::string& input);
+std::string to_uppercase(const std::string& input);
 
 /**
  * @brief Create a listener socket.

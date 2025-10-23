@@ -1,72 +1,142 @@
+/**
+ * @file http_consts.hpp
+ * @brief HTTP protocol constants and configuration parameters
+ *
+ * This file provides HTTP/1.1 standard constants including status codes,
+ * common header names, protocol versions, and runtime configuration values.
+ *
+ * The config namespace contains mutable runtime settings that can be adjusted
+ * before starting the server to customize size limits and timeout behavior.
+ *
+ * The consts namespace provides compile-time constants for HTTP protocol
+ * elements, ensuring consistency and avoiding magic strings throughout the codebase.
+ *
+ * @example
+ * @code
+ * // Configure server limits before starting
+ * cppress::http::config::MAX_BODY_SIZE = 5 * 1024 * 1024;  // 5 MB
+ * cppress::http::config::TIMEOUT_MILLISECONDS = 3000;  // 3 seconds
+ *
+ * // Use constants in response handling
+ * response.set_status(cppress::http::consts::HTTP_OK, "OK");
+ * response.add_header(cppress::http::consts::HEADER_CONTENT_TYPE, "application/json");
+ * @endcode
+ */
+
 #pragma once
 
-#include <string>
 #include <algorithm>
 #include <chrono>
-namespace hh_http
-{
-    namespace epoll_config
-    {
-        // Maximum number of pending connections
-        extern int BACKLOG_SIZE;
+#include <string>
+namespace cppress::http {
 
-        // Maximum number of open file descriptors
-        extern int MAX_FILE_DESCRIPTORS;
+/**
+ * @namespace cppress::http::config
+ * @brief Runtime configuration parameters for HTTP server behavior
+ *
+ * These values can be modified before server startup to customize
+ * size limits, timeouts, and connection handling behavior.
+ *
+ * @warning Changes to these values after server starts may not take effect
+ */
+namespace config {
+/// Maximum size of HTTP headers (default: system-dependent)
+extern size_t MAX_HEADER_SIZE;
 
-        /// @brief Maximum timeout for connections (in milliseconds)
-        extern int TIMEOUT_MILLISECONDS;
+/// Maximum size of HTTP request body (default: system-dependent)
+extern size_t MAX_BODY_SIZE;
 
-    }
-    namespace config
-    {
-        extern size_t MAX_HEADER_SIZE;
-        extern size_t MAX_BODY_SIZE;
-        extern std::chrono::seconds MAX_IDLE_TIME_SECONDS;
-    }
-    // HTTP Version Constants
-    constexpr const char *HTTP_VERSION_1_0 = "HTTP/1.0";
-    constexpr const char *HTTP_VERSION_1_1 = "HTTP/1.1";
+/// Maximum idle time before connection cleanup (default: system-dependent)
+extern std::chrono::seconds MAX_IDLE_TIME_SECONDS;
 
-    // HTTP Status Codes (commonly used)
-    constexpr int HTTP_OK = 200;
-    constexpr int HTTP_CREATED = 201;
-    constexpr int HTTP_NO_CONTENT = 204;
-    constexpr int HTTP_BAD_REQUEST = 400;
-    constexpr int HTTP_UNAUTHORIZED = 401;
-    constexpr int HTTP_FORBIDDEN = 403;
-    constexpr int HTTP_NOT_FOUND = 404;
-    constexpr int HTTP_INTERNAL_SERVER_ERROR = 500;
+/// Server socket listen backlog size (default: system-dependent)
+extern int BACKLOG_SIZE;
 
-    // HTTP Methods
-    constexpr const char *HTTP_GET = "GET";
-    constexpr const char *HTTP_POST = "POST";
-    constexpr const char *HTTP_PUT = "PUT";
-    constexpr const char *HTTP_DELETE = "DELETE";
-    constexpr const char *HTTP_HEAD = "HEAD";
-    constexpr const char *HTTP_OPTIONS = "OPTIONS";
-    constexpr const char *HTTP_PATCH = "PATCH";
+/// Maximum number of file descriptors for epoll/select (default: system-dependent)
+extern int MAX_FILE_DESCRIPTORS;
 
-    // HTTP Headers (commonly used)
-    constexpr const char *HEADER_CONTENT_TYPE = "Content-Type";
-    constexpr const char *HEADER_CONTENT_LENGTH = "Content-Length";
-    constexpr const char *HEADER_CONNECTION = "Connection";
-    constexpr const char *HEADER_HOST = "Host";
-    constexpr const char *HEADER_USER_AGENT = "User-Agent";
-    constexpr const char *HEADER_ACCEPT = "Accept";
-    constexpr const char *HEADER_AUTHORIZATION = "Authorization";
-    constexpr const char *HEADER_REFERER = "Referer";
-    constexpr const char *HEADER_COOKIE = "Cookie";
-    constexpr const char *HEADER_IF_MODIFIED_SINCE = "If-Modified-Since";
-    constexpr const char *HEADER_IF_NONE_MATCH = "If-None-Match";
-    constexpr const char *HEADER_EXPECT = "Expect";
+/// Timeout for epoll/select operations in milliseconds (default: system-dependent)
+extern int TIMEOUT_MILLISECONDS;
+}  // namespace config
 
-    // HTTP Line Endings
-    constexpr const char *CRLF = "\r\n";
-    constexpr const char *DOUBLE_CRLF = "\r\n\r\n";
+/**
+ * @namespace cppress::http::consts
+ * @brief HTTP/1.1 protocol constants
+ *
+ * Provides compile-time constants for HTTP versions, status codes,
+ * standard header names, and protocol delimiters.
+ */
+namespace consts {
+/// HTTP protocol version 1.0
+constexpr const char* HTTP_VERSION_1_0 = "HTTP/1.0";
 
-    /// @brief Convert string to uppercase.
-    /// @param input String to convert
-    /// @note does not modify the original string, returns a new uppercase string
-    /// @return Uppercase version of input string
-    std::string to_upper_case(const std::string &input);
-}
+/// HTTP protocol version 1.1
+constexpr const char* HTTP_VERSION_1_1 = "HTTP/1.1";
+
+/// 200 - Request succeeded
+constexpr int HTTP_OK = 200;
+
+/// 201 - Resource created successfully
+constexpr int HTTP_CREATED = 201;
+
+/// 204 - No content to return
+constexpr int HTTP_NO_CONTENT = 204;
+
+/// 400 - Malformed request
+constexpr int HTTP_BAD_REQUEST = 400;
+
+/// 401 - Authentication required
+constexpr int HTTP_UNAUTHORIZED = 401;
+
+/// 403 - Access denied
+constexpr int HTTP_FORBIDDEN = 403;
+
+/// 404 - Resource not found
+constexpr int HTTP_NOT_FOUND = 404;
+
+/// 500 - Server error
+constexpr int HTTP_INTERNAL_SERVER_ERROR = 500;
+
+/// Content-Type header name
+constexpr const char* HEADER_CONTENT_TYPE = "Content-Type";
+
+/// Content-Length header name
+constexpr const char* HEADER_CONTENT_LENGTH = "Content-Length";
+
+/// Connection header name
+constexpr const char* HEADER_CONNECTION = "Connection";
+
+/// Host header name
+constexpr const char* HEADER_HOST = "Host";
+
+/// User-Agent header name
+constexpr const char* HEADER_USER_AGENT = "User-Agent";
+
+/// Accept header name
+constexpr const char* HEADER_ACCEPT = "Accept";
+
+/// Authorization header name
+constexpr const char* HEADER_AUTHORIZATION = "Authorization";
+
+/// Referer header name
+constexpr const char* HEADER_REFERER = "Referer";
+
+/// Cookie header name
+constexpr const char* HEADER_COOKIE = "Cookie";
+
+/// If-Modified-Since header name
+constexpr const char* HEADER_IF_MODIFIED_SINCE = "If-Modified-Since";
+
+/// If-None-Match header name
+constexpr const char* HEADER_IF_NONE_MATCH = "If-None-Match";
+
+/// Expect header name (e.g., "100-continue")
+constexpr const char* HEADER_EXPECT = "Expect";
+
+/// HTTP line ending sequence
+constexpr const char* CRLF = "\r\n";
+
+/// HTTP header/body separator
+constexpr const char* DOUBLE_CRLF = "\r\n\r\n";
+}  // namespace consts
+}  // namespace cppress::http

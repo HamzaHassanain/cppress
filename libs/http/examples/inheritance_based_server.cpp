@@ -1,9 +1,9 @@
-#include "../http-lib.hpp"
-
-#include <iostream>
-#include <string>
-#include <map>
 #include <functional>
+#include <iostream>
+#include <map>
+#include <string>
+
+#include "../http-lib.hpp"
 
 /**
  * @brief Example HTTP server using inheritance-based architecture
@@ -12,11 +12,11 @@
  * by overriding virtual methods to customize behavior.
  */
 
-class CustomHttpServer : public hh_http::http_server
-{
+class CustomHttpServer : public cppress::http::http_server {
 private:
     // Route handler type
-    using RouteHandler = std::function<void(hh_http::http_request &, hh_http::http_response &)>;
+    using RouteHandler =
+        std::function<void(cppress::http::http_request&, cppress::http::http_response&)>;
 
     // Route storage: method -> path -> handler
     std::map<std::string, std::map<std::string, RouteHandler>> routes;
@@ -26,38 +26,47 @@ private:
     size_t connection_count = 0;
 
 public:
-    CustomHttpServer(int port, const std::string &ip = "0.0.0.0")
-        : hh_http::http_server(port, ip, 1000)
-    {
+    CustomHttpServer(int port, const std::string& ip = "0.0.0.0")
+        : cppress::http::http_server(port, ip, 1000) {
         setup_routes();
     }
 
 private:
-    void setup_routes()
-    {
+    void setup_routes() {
         // GET routes
-        add_route("GET", "/", [this](hh_http::http_request &req, hh_http::http_response &res)
-                  { handle_home(req, res); });
+        add_route("GET", "/",
+                  [this](cppress::http::http_request& req, cppress::http::http_response& res) {
+                      handle_home(req, res);
+                  });
 
-        add_route("GET", "/stats", [this](hh_http::http_request &req, hh_http::http_response &res)
-                  { handle_stats(req, res); });
+        add_route("GET", "/stats",
+                  [this](cppress::http::http_request& req, cppress::http::http_response& res) {
+                      handle_stats(req, res);
+                  });
 
-        add_route("GET", "/hello", [this](hh_http::http_request &req, hh_http::http_response &res)
-                  { handle_hello(req, res); });
+        add_route("GET", "/hello",
+                  [this](cppress::http::http_request& req, cppress::http::http_response& res) {
+                      handle_hello(req, res);
+                  });
 
-        add_route("GET", "/api/info", [this](hh_http::http_request &req, hh_http::http_response &res)
-                  { handle_api_info(req, res); });
+        add_route("GET", "/api/info",
+                  [this](cppress::http::http_request& req, cppress::http::http_response& res) {
+                      handle_api_info(req, res);
+                  });
 
         // POST routes
-        add_route("POST", "/api/echo", [this](hh_http::http_request &req, hh_http::http_response &res)
-                  { handle_api_echo(req, res); });
+        add_route("POST", "/api/echo",
+                  [this](cppress::http::http_request& req, cppress::http::http_response& res) {
+                      handle_api_echo(req, res);
+                  });
 
-        add_route("POST", "/api/uppercase", [this](hh_http::http_request &req, hh_http::http_response &res)
-                  { handle_api_uppercase(req, res); });
+        add_route("POST", "/api/uppercase",
+                  [this](cppress::http::http_request& req, cppress::http::http_response& res) {
+                      handle_api_uppercase(req, res);
+                  });
     }
 
-    void add_route(const std::string &method, const std::string &path, RouteHandler handler)
-    {
+    void add_route(const std::string& method, const std::string& path, RouteHandler handler) {
         routes[method][path] = handler;
     }
 
@@ -66,8 +75,8 @@ private:
     /**
      * @brief Override request processing with custom routing
      */
-    void on_request_received(hh_http::http_request &request, hh_http::http_response &response) override
-    {
+    void on_request_received(cppress::http::http_request& request,
+                             cppress::http::http_response& response) override {
         request_count++;
 
         std::string method = request.get_method();
@@ -82,12 +91,9 @@ private:
         response.add_header("X-Request-ID", std::to_string(request_count));
 
         // Find and execute route handler
-        if (routes.count(method) && routes[method].count(uri))
-        {
+        if (routes.count(method) && routes[method].count(uri)) {
             routes[method][uri](request, response);
-        }
-        else
-        {
+        } else {
             handle_not_found(request, response);
         }
 
@@ -97,40 +103,36 @@ private:
     /**
      * @brief Override connection opened for custom logging
      */
-    void on_connection_opened(std::shared_ptr<hh_socket::connection> conn) override
-    {
+    void on_connection_opened(std::shared_ptr<cppress::socketsconnection> conn) override {
         connection_count++;
         std::cout << "🔗 Connection #" << connection_count << " opened from "
                   << conn->get_remote_address().to_string() << std::endl;
 
         // Call parent implementation (if needed)
-        hh_http::http_server::on_connection_opened(conn);
+        cppress::http::http_server::on_connection_opened(conn);
     }
 
     /**
      * @brief Override connection closed for custom cleanup
      */
-    void on_connection_closed(std::shared_ptr<hh_socket::connection> conn) override
-    {
-        std::cout << "💔 Connection closed from " << conn->get_remote_address().to_string() << std::endl;
+    void on_connection_closed(std::shared_ptr<cppress::socketsconnection> conn) override {
+        std::cout << "💔 Connection closed from " << conn->get_remote_address().to_string()
+                  << std::endl;
 
         // Call parent implementation (if needed)
-        hh_http::http_server::on_connection_closed(conn);
+        cppress::http::http_server::on_connection_closed(conn);
     }
 
     /**
      * @brief Override server startup
      */
-    void on_listen_success() override
-    {
+    void on_listen_success() override {
         std::cout << "🎉 Custom HTTP Server started successfully!" << std::endl;
         std::cout << "🌐 Server is listening on http://localhost:8080" << std::endl;
         std::cout << "📊 Available routes:" << std::endl;
 
-        for (const auto &method_routes : routes)
-        {
-            for (const auto &route : method_routes.second)
-            {
+        for (const auto& method_routes : routes) {
+            for (const auto& route : method_routes.second) {
                 std::cout << "   " << method_routes.first << " " << route.first << std::endl;
             }
         }
@@ -141,8 +143,7 @@ private:
     /**
      * @brief Override error handling
      */
-    void on_exception_occurred(const std::exception &e) override
-    {
+    void on_exception_occurred(const std::exception& e) override {
         std::cerr << "🚨 Server exception: " << e.what() << std::endl;
         // Could implement custom error recovery here
     }
@@ -150,11 +151,9 @@ private:
     /**
      * @brief Override idle periods for custom maintenance
      */
-    void on_waiting_for_activity() override
-    {
+    void on_waiting_for_activity() override {
         static int idle_count = 0;
-        if (++idle_count % 30 == 0)
-        { // Every 30 seconds
+        if (++idle_count % 30 == 0) {  // Every 30 seconds
             std::cout << "📈 Server stats: " << request_count << " requests served, "
                       << connection_count << " total connections" << std::endl;
         }
@@ -162,8 +161,7 @@ private:
 
     // Route handler implementations
 
-    void handle_home(hh_http::http_request &req, hh_http::http_response &res)
-    {
+    void handle_home(cppress::http::http_request& req, cppress::http::http_response& res) {
         res.set_status(200, "OK");
         res.add_header("Content-Type", "text/html; charset=utf-8");
 
@@ -207,15 +205,15 @@ private:
         )");
     }
 
-    void handle_hello(hh_http::http_request &req, hh_http::http_response &res)
-    {
+    void handle_hello(cppress::http::http_request& req, cppress::http::http_response& res) {
         res.set_status(200, "OK");
         res.add_header("Content-Type", "text/plain");
-        res.set_body("👋 Hello from the custom inheritance-based HTTP server!\n🏗️ Built with virtual method overrides!\n");
+        res.set_body(
+            "👋 Hello from the custom inheritance-based HTTP server!\n🏗️ Built with virtual method "
+            "overrides!\n");
     }
 
-    void handle_stats(hh_http::http_request &req, hh_http::http_response &res)
-    {
+    void handle_stats(cppress::http::http_request& req, cppress::http::http_response& res) {
         res.set_status(200, "OK");
         res.add_header("Content-Type", "text/html; charset=utf-8");
 
@@ -262,8 +260,7 @@ private:
         res.set_body(stats_html);
     }
 
-    void handle_api_info(hh_http::http_request &req, hh_http::http_response &res)
-    {
+    void handle_api_info(cppress::http::http_request& req, cppress::http::http_response& res) {
         res.set_status(200, "OK");
         res.add_header("Content-Type", "application/json");
 
@@ -297,8 +294,7 @@ private:
         res.set_body(json_response);
     }
 
-    void handle_api_echo(hh_http::http_request &req, hh_http::http_response &res)
-    {
+    void handle_api_echo(cppress::http::http_request& req, cppress::http::http_response& res) {
         res.set_status(200, "OK");
         res.add_header("Content-Type", "application/json");
 
@@ -317,8 +313,7 @@ private:
         res.set_body(echo_json);
     }
 
-    void handle_api_uppercase(hh_http::http_request &req, hh_http::http_response &res)
-    {
+    void handle_api_uppercase(cppress::http::http_request& req, cppress::http::http_response& res) {
         res.set_status(200, "OK");
         res.add_header("Content-Type", "application/json");
 
@@ -337,8 +332,7 @@ private:
         res.set_body(response_json);
     }
 
-    void handle_not_found(hh_http::http_request &req, hh_http::http_response &res)
-    {
+    void handle_not_found(cppress::http::http_request& req, cppress::http::http_response& res) {
         res.set_status(404, "Not Found");
         res.add_header("Content-Type", "text/html; charset=utf-8");
 
@@ -358,7 +352,8 @@ private:
         <div class="error">🔍</div>
         <h1>404 - Route Not Found</h1>
         <p>The requested route <code>)" +
-                                     req.get_method() + " " + req.get_uri() + R"(</code> was not found.</p>
+                                     req.get_method() + " " + req.get_uri() +
+                                     R"(</code> was not found.</p>
         <p>This error was handled by the custom inheritance-based server.</p>
         <p><a href="/">🏠 Go back to home</a></p>
     </div>
@@ -370,12 +365,9 @@ private:
     }
 };
 
-int main()
-{
-    try
-    {
-        if (!hh_socket::initialize_socket_library())
-        {
+int main() {
+    try {
+        if (!cppress::socketsinitialize_socket_library()) {
             std::cerr << "Failed to initialize socket library." << std::endl;
             return 1;
         }
@@ -386,14 +378,12 @@ int main()
 
         // Start the server (this will block)
         server.listen();
-    }
-    catch (const std::exception &e)
-    {
+    } catch (const std::exception& e) {
         std::cerr << "💥 Failed to start server: " << e.what() << std::endl;
         return 1;
     }
 
-    hh_socket::cleanup_socket_library();
+    cppress::socketscleanup_socket_library();
 
     return 0;
 }

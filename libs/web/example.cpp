@@ -320,14 +320,15 @@ int main() {
         // hh_web::logger::absolute_path_to_logs =
         // "C:\\Users\\hamza\\Documnets\\Projects\\hamza-backend-web-library-cpp\\logs\\";
         // hh_web::logger::enabled_logging = true;
-        // hh_http::config::MAX_BODY_SIZE = 1024 * 64;
-        // hh_http::config::MAX_HEADER_SIZE = 1024 * 4;
-        // hh_http::config::MAX_IDLE_TIME_SECONDS = std::chrono::seconds(60);
+        // cppress::http::config::MAX_BODY_SIZE = 1024 * 64;
+        // cppress::http::config::MAX_HEADER_SIZE = 1024 * 4;
+        // cppress::http::config::MAX_IDLE_TIME_SECONDS = std::chrono::seconds(60);
 
-        // hh_http::epoll_config::BACKLOG_SIZE = 1024 * 1024;       // Set maximum number of pending
-        // connections hh_http::epoll_config::MAX_FILE_DESCRIPTORS = 1024 * 64; // Set maximum
-        // number of open files (open connections at the same time)
-        // hh_http::epoll_config::TIMEOUT_MILLISECONDS = 1000;      // Set timeout for epoll wait
+        // cppress::http::config::BACKLOG_SIZE = 1024 * 1024;       // Set maximum number of
+        // pending connections cppress::http::config::MAX_FILE_DESCRIPTORS = 1024 * 64; // Set
+        // maximum number of open files (open connections at the same time)
+        // cppress::http::config::TIMEOUT_MILLISECONDS = 1000;      // Set timeout for epoll
+        // wait
 
         // Create server instance
         auto server = std::make_shared<hh_web::web_server<>>(port, host);

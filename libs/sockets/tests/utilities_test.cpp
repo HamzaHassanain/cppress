@@ -253,24 +253,24 @@ TEST(UtilitiesTest, IsValidSocket_CreatedSocket) {
 }
 
 // ============================================================================
-// Tests for to_upper_case
+// Tests for to_uppercase
 // ============================================================================
 
 TEST(UtilitiesTest, ToUpperCase_BasicString) {
-    EXPECT_EQ(to_upper_case("hello"), "HELLO");
-    EXPECT_EQ(to_upper_case("world"), "WORLD");
+    EXPECT_EQ(to_uppercase("hello"), "HELLO");
+    EXPECT_EQ(to_uppercase("world"), "WORLD");
 }
 
 TEST(UtilitiesTest, ToUpperCase_MixedCase) {
-    EXPECT_EQ(to_upper_case("HeLLo WoRLd"), "HELLO WORLD");
-    EXPECT_EQ(to_upper_case("TeSt123"), "TEST123");
+    EXPECT_EQ(to_uppercase("HeLLo WoRLd"), "HELLO WORLD");
+    EXPECT_EQ(to_uppercase("TeSt123"), "TEST123");
 }
 
 TEST(UtilitiesTest, ToUpperCase_SpecialCases) {
-    EXPECT_EQ(to_upper_case(""), "");
-    EXPECT_EQ(to_upper_case("123"), "123");
-    EXPECT_EQ(to_upper_case("ALREADY_UPPER"), "ALREADY_UPPER");
-    EXPECT_EQ(to_upper_case("with-dashes"), "WITH-DASHES");
+    EXPECT_EQ(to_uppercase(""), "");
+    EXPECT_EQ(to_uppercase("123"), "123");
+    EXPECT_EQ(to_uppercase("ALREADY_UPPER"), "ALREADY_UPPER");
+    EXPECT_EQ(to_uppercase("with-dashes"), "WITH-DASHES");
 }
 
 // ============================================================================

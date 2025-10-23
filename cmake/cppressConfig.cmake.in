@@ -14,8 +14,8 @@ check_required_components(cppress)
 # Optional: Define convenience variables
 set(cppress_LIBRARIES 
     cppress::sockets
-#    cppress::web_framework
-#    cppress::http_server
+#   cppress::web_framework
+    cppress::http
     cppress::json
     cppress::html
 )

@@ -1,14 +1,78 @@
+/**
+ * @file http_server.hpp
+ * @brief Complete HTTP/1.1 server implementation with callback architecture
+ *
+ * This file defines the http_server class, which provides a production-ready
+ * HTTP/1.1 server built on top of the cppress sockets library (epoll-based).
+ *
+ * The server handles all low-level HTTP protocol details including request parsing,
+ * header validation, body handling, and connection management. It provides two
+ * programming models for implementing application logic:
+ *
+ * 1. **Callback-based**: Set callback functions for request handling, errors,
+ *    connection events, etc. This is the recommended approach for most applications
+ *    as it provides clear separation of concerns.
+ *
+ * 2. **Inheritance-based**: Extend http_server and override virtual protected
+ *    methods like on_request_received(). Useful for more complex scenarios
+ *    requiring custom lifecycle management.
+ *
+ * Key features:
+ * - Full HTTP/1.1 parsing (RFC 2616/7230 compliant)
+ * - Support for all standard HTTP methods (GET, POST, PUT, DELETE, etc.)
+ * - Content-Length based body handling
+ * - Configurable size limits and timeouts
+ * - Multiple concurrent connections via epoll (Linux) or select (cross-platform)
+ * - Thread-safe request handling (when used with thread pool)
+ * - Automatic connection lifecycle management
+ * - Idle connection cleanup
+ * - Comprehensive callback system for all server events
+ *
+ * How to use:
+ * 1. Create http_server instance with port and optional IP address
+ * 2. Configure limits via cppress::http::config namespace (optional)
+ * 3. Set request_callback to handle incoming requests
+ * 4. Optionally set other callbacks (errors, connections, etc.)
+ * 5. Call listen() to start the server (blocks until stopped)
+ *
+ * @example Simple callback-based server
+ * @code
+ * cppress::http::http_server server(8080);
+ *
+ * server.set_request_callback([](auto& req, auto& res) {
+ *     res.set_status(200, "OK");
+ *     res.add_header("Content-Type", "text/plain");
+ *     res.set_body("Hello from cppress!");
+ *     res.send();
+ *     res.end();
+ * });
+ *
+ * server.set_error_callback([](const std::exception& e) {
+ *     std::cerr << "Server error: " << e.what() << std::endl;
+ * });
+ *
+ * server.listen();  // Blocks here
+ * @endcode
+ *
+ * @note The server currently uses "Connection: close" for all responses
+ * @note Request/response objects are move-only and callback-scoped
+ * @note For production use, consider running behind a reverse proxy (nginx)
+ *       for SSL/TLS, load balancing, and static file serving
+ *
+ * @see http_request, http_response, http_message_handler
+ */
+
 #pragma once
 
 #include <string>
 
-#include "../libs/socket-lib/socket-lib.hpp"
 #include "http_consts.hpp"
-#include "http_message_handler.hpp"
 #include "http_request.hpp"
+#include "http_request_parser.hpp"
 #include "http_response.hpp"
+#include "sockets/includes.hpp"
 
-namespace hh_http {
+namespace cppress::http {
 /**
  * @brief High-level HTTP/1.1 server built on top of TCP server infrastructure.
  *
@@ -29,17 +93,16 @@ namespace hh_http {
  * @note Thread-safe through underlying tcp_server implementation
  * @note Move-only design prevents accidental copying of server resources
  */
-class http_server : public hh_socket::epoll_server {
+class http_server : public cppress::sockets::epoll_server {
 private:
-    /// The HTTP message handler instance, that parses the message, makes sure we have a valid HTTP
-    /// request
-    http_message_handler handler;
+    /// HTTP request parser instance that handles protocol parsing and state management
+    http_request_parser parser_;
 
-    /// Timeout for client connections
+    /// Timeout for client connections in milliseconds
     int timeout_milliseconds;
 
     /// Shared pointer to the server socket
-    std::shared_ptr<hh_socket::socket> server_socket;
+    std::shared_ptr<cppress::sockets::socket> server_socket;
 
     /// Callback for handling HTTP requests and generating responses
     std::function<void(http_request&, http_response&)> request_callback;
@@ -48,10 +111,10 @@ private:
     std::function<void(const std::exception&)> error_callback;
 
     /// Callback triggered when new client connects
-    std::function<void(std::shared_ptr<hh_socket::connection>)> client_connected_callback;
+    std::function<void(std::shared_ptr<cppress::sockets::connection>)> client_connected_callback;
 
     /// Callback triggered when client disconnects
-    std::function<void(std::shared_ptr<hh_socket::connection>)> client_disconnected_callback;
+    std::function<void(std::shared_ptr<cppress::sockets::connection>)> client_disconnected_callback;
 
     /// Callback triggered when server starts listening successfully
     std::function<void()> listen_success_callback;
@@ -63,7 +126,7 @@ private:
     std::function<void()> waiting_for_activity_callback;
 
     /// Callback triggered when HTTP headers are received
-    std::function<void(std::shared_ptr<hh_socket::connection>,
+    std::function<void(std::shared_ptr<cppress::sockets::connection>,
                        const std::multimap<std::string, std::string>&, const std::string&,
                        const std::string&, const std::string&, const std::string&)>
         headers_received_callback;
@@ -79,8 +142,8 @@ protected:
      * @note Handles HTTP/1.1 request parsing including headers and body
      * @note calles on_request_received() for further processing
      */
-    void on_message_received(std::shared_ptr<hh_socket::connection> conn,
-                             const hh_socket::data_buffer& message) override;
+    void on_message_received(std::shared_ptr<cppress::sockets::connection> conn,
+                             const cppress::sockets::data_buffer& message) override;
 
     /**
      * @brief Handle server startup completion.
@@ -106,14 +169,14 @@ protected:
      * @param conn Client connection that was opened
      * @note Calls user-provided client connection opened callback if set
      */
-    virtual void on_connection_opened(std::shared_ptr<hh_socket::connection> conn) override;
+    virtual void on_connection_opened(std::shared_ptr<cppress::sockets::connection> conn) override;
 
     /**
      * @brief Handle new client connection events.
      * @param conn the connection that will be closed
      * @note Calls user-provided client connection closed callback if set
      */
-    virtual void on_connection_closed(std::shared_ptr<hh_socket::connection> conn) override;
+    virtual void on_connection_closed(std::shared_ptr<cppress::sockets::connection> conn) override;
 
     /**
      * @brief Handle server idle periods
@@ -141,7 +204,7 @@ protected:
      * @param version HTTP version (e.g., "HTTP/1.1")
      * @param body Request body (if any)
      */
-    virtual void on_headers_received(std::shared_ptr<hh_socket::connection> conn,
+    virtual void on_headers_received(std::shared_ptr<cppress::sockets::connection> conn,
                                      const std::multimap<std::string, std::string>& headers,
                                      const std::string& method, const std::string& uri,
                                      const std::string& version, const std::string& body) {
@@ -158,8 +221,8 @@ public:
      * @throws socket_exception for socket creation, binding, or listening errors
      * @note Inherits all TCP server functionality and error handling
      */
-    explicit http_server(const hh_socket::socket_address& addr,
-                         int timeout_milliseconds = epoll_config::TIMEOUT_MILLISECONDS);
+    explicit http_server(const cppress::sockets::socket_address& addr,
+                         int timeout_milliseconds = config::TIMEOUT_MILLISECONDS);
 
     /**
      * @brief Construct HTTP server with IP address and port.
@@ -170,9 +233,10 @@ public:
      * @note Defaults to IPv4 address family
      */
     explicit http_server(int port, const std::string& ip = "0.0.0.0",
-                         int timeout_milliseconds = epoll_config::TIMEOUT_MILLISECONDS)
-        : http_server(hh_socket::socket_address(hh_socket::port(port), hh_socket::ip_address(ip),
-                                                hh_socket::family(hh_socket::IPV4)),
+                         int timeout_milliseconds = config::TIMEOUT_MILLISECONDS)
+        : http_server(cppress::sockets::socket_address(
+                          cppress::sockets::port(port), cppress::sockets::ip_address(ip),
+                          cppress::sockets::family(cppress::sockets::IPV4)),
                       timeout_milliseconds) {}
 
     // Copy and move operations - DELETED for resource safety
@@ -222,7 +286,7 @@ public:
      * @note Useful for connection logging, rate limiting, or authentication
      */
     void set_client_connected_callback(
-        std::function<void(std::shared_ptr<hh_socket::connection>)> callback);
+        std::function<void(std::shared_ptr<cppress::sockets::connection>)> callback);
 
     /**
      * @brief Set callback for client disconnections.
@@ -231,7 +295,7 @@ public:
      * @note Useful for cleanup, session management, or analytics
      */
     void set_client_disconnected_callback(
-        std::function<void(std::shared_ptr<hh_socket::connection>)> callback);
+        std::function<void(std::shared_ptr<cppress::sockets::connection>)> callback);
 
     /**
      * @brief Set callback for server idle periods.
@@ -246,12 +310,12 @@ public:
      * @brief Set the headers received callback object
      *
      * @param callback that is able to recive:
-     *      std::shared_ptr<hh_socket::connection> conn, const std::multimap<std::string,
+     *      std::shared_ptr<cppress::sockets::sconnection> conn, const std::multimap<std::string,
      * std::string> & headers, const std::string & method, const std::string & uri, const
      * std::string & version, const std::string & body
      */
     void set_headers_received_callback(
-        std::function<void(std::shared_ptr<hh_socket::connection>,
+        std::function<void(std::shared_ptr<cppress::sockets::connection>,
                            const std::multimap<std::string, std::string>&, const std::string&,
                            const std::string&, const std::string&, const std::string&)>
             callback) {
@@ -264,4 +328,4 @@ public:
      */
     virtual void listen() { epoll_server::listen(timeout_milliseconds); }
 };
-}  // namespace hh_http
+}  // namespace cppress::http

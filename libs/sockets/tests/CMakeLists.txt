@@ -56,10 +56,7 @@ if(TEST_FILES)
             GTest::gtest
     )
 
-    # Add libraries that exist
-    if(TARGET sockets)
-        target_link_libraries(sockets-tests PRIVATE sockets)
-    endif()
+    target_link_libraries(sockets-tests PRIVATE sockets)
 
     # Tell CMake to find and register the tests to be run with CTest
     include(GoogleTest)

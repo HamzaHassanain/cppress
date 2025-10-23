@@ -400,7 +400,7 @@ std::string get_error_message() {
     }
 }
 
-std::string to_upper_case(const std::string& input) {
+std::string to_uppercase(const std::string& input) {
     std::string upper_case_str = input;
     std::transform(upper_case_str.begin(), upper_case_str.end(), upper_case_str.begin(),
                    [](unsigned char c) { return std::toupper(c); });
