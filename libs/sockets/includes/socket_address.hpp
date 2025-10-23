@@ -177,19 +177,19 @@ public:
     ~socket_address() = default;
 
     /**
-     * @brief Get the IP address component (STL-style accessor).
+     * @brief Get the IP address component ().
      * @return IP address object
      */
     cppress::sockets::ip_address address() const { return address_; }
 
     /**
-     * @brief Get the port component (STL-style accessor).
+     * @brief Get the port component ().
      * @return Port object
      */
     cppress::sockets::port port() const { return port_; }
 
     /**
-     * @brief Get the address family component (STL-style accessor).
+     * @brief Get the address family component ().
      * @return Address family object
      */
     cppress::sockets::family family() const { return family_; }
@@ -226,7 +226,7 @@ public:
     }
 
     /**
-     * @brief Get raw sockaddr pointer for system calls (STL-style accessor).
+     * @brief Get raw sockaddr pointer for system calls ().
      * @return Pointer to underlying sockaddr structure
      *
      * Returns pointer suitable for use with socket system calls like
@@ -236,7 +236,7 @@ public:
     sockaddr* data() const;
 
     /**
-     * @brief Get size of sockaddr structure (STL-style accessor).
+     * @brief Get size of sockaddr structure ().
      * @return Size in bytes of the sockaddr structure
      *
      * Returns appropriate size for IPv4 (sockaddr_in) or IPv6 (sockaddr_in6).

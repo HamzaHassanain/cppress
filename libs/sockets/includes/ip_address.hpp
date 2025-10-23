@@ -148,7 +148,7 @@ public:
     ip_address& operator=(ip_address&&) = default;
 
     /**
-     * @brief Get the IP address string (STL-style accessor).
+     * @brief Get the IP address string ().
      * @return Const reference to the IP address string
      *
      * Returns a const reference to the internal string representation

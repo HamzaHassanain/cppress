@@ -363,8 +363,6 @@ public:
      * - Closes all active connections
      * - Closes listener socket if present
      * - Closes epoll file descriptor
-     *
-     * @note Virtual destructor allows proper cleanup in inheritance hierarchies
      */
     virtual ~epoll_server();
 

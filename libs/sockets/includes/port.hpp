@@ -125,7 +125,7 @@ public:
     port& operator=(port&&) = default;
 
     /**
-     * @brief Get the port number (STL-style accessor).
+     * @brief Get the port number ().
      * @return Port number as integer
      *
      * Returns the stored port number value. This follows STL conventions

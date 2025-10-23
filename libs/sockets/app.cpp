@@ -10,7 +10,7 @@
 
 class EchoServer : public cppress::sockets::epoll_server {
 public:
-    EchoServer() : cppress::sockets::epoll_server(1000) {}  // Max 1000 connections
+    EchoServer() : cppress::sockets::epoll_server(1000) {}
 
 protected:
     void on_connection_opened(std::shared_ptr<cppress::sockets::connection> conn) override {

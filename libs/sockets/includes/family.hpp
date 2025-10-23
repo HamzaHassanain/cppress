@@ -31,7 +31,7 @@
  * @code
  * family f(IPV4);
  *
- * // STL-style accessor
+ * //
  * int family_id = f.value();
  * std::cout << "Family: " << family_id << "\n";
  *
@@ -137,6 +137,7 @@ namespace cppress::sockets {
  * socket_address addr(ip_address("127.0.0.1"), port(8080), ipv4_family);
  * @endcode
  */
+
 class family {
 private:
     /// Allowed address family values (IPv4 and IPv6)
@@ -192,7 +193,7 @@ public:
     family& operator=(family&& other) = default;  //  for move assignment
 
     /**
-     * @brief Get the raw address family value (STL-style accessor).
+     * @brief Get the raw address family value ().
      * @return Integer value representing the address family (AF_INET, AF_INET6, etc.)
      *
      * Returns the stored address family constant. This follows STL conventions

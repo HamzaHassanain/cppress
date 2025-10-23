@@ -189,7 +189,7 @@ public:
     }
 
     /**
-     * @brief Get the file descriptor raw value (STL-style accessor).
+     * @brief Get the file descriptor raw value ().
      * @return the value of the file descriptor
      *
      * Returns the underlying platform-specific file descriptor.
@@ -253,7 +253,7 @@ public:
     void close();
 
     /**
-     * @brief Check if the connection is open (STL-style accessor).
+     * @brief Check if the connection is open ().
      * @return true if the connection is open, false otherwise
      *
      * Follows STL convention like std::fstream::is_open().
@@ -283,18 +283,16 @@ public:
     bool is_connection_open() const;
 
     /**
-     * @brief Get the remote endpoint address (STL-style accessor).
+     * @brief Get the remote endpoint address ().
      * @return socket_address of the remote peer
      *
-     * Follows STL naming like networking TS and Boost.Asio.
+     *
      */
     socket_address remote_endpoint() const { return remote_addr; }
 
     /**
-     * @brief Get the local endpoint address (STL-style accessor).
+     * @brief Get the local endpoint address ().
      * @return socket_address of the local endpoint
-     *
-     * Follows STL naming like networking TS and Boost.Asio.
      */
     socket_address local_endpoint() const { return local_addr; }
 

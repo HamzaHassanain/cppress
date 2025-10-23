@@ -228,7 +228,7 @@ public:
     }
 
     /**
-     * @brief Get the raw socket/file descriptor value (STL-style accessor).
+     * @brief Get the raw socket/file descriptor value ().
      * @return Raw socket handle or file descriptor as integer
      *
      * Returns the underlying platform-specific socket handle or file descriptor.

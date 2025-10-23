@@ -428,7 +428,7 @@ public:
     socket_address get_bound_address() const;
 
     /**
-     * @brief Get raw file descriptor value (STL-style accessor).
+     * @brief Get raw file descriptor value ().
      * @return Integer file descriptor value
      *
      * Returns the underlying platform-specific socket handle or file descriptor.
@@ -462,7 +462,7 @@ public:
     void disconnect();
 
     /**
-     * @brief Check if socket is open (STL-style accessor).
+     * @brief Check if socket is open ().
      * @return true if socket is open and valid, false otherwise
      *
      * Follows STL convention like std::fstream::is_open().

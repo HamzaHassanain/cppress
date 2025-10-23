@@ -106,10 +106,10 @@
  *
  * // Type-safe address components
  * ip_address addr("192.168.1.1");
- * std::string addr_str = addr.string();  // STL-style accessor
+ * std::string addr_str = addr.string();  //
  *
  * port p(8080);
- * int port_num = p.value();  // STL-style accessor
+ * int port_num = p.value();  //
  *
  * family fam = family::ipv4();
  * int af = fam.value();  // Get AF_INET
