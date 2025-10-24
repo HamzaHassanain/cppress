@@ -65,7 +65,7 @@ add_subdirectory(libs/json)
 add_subdirectory(libs/html)
 add_subdirectory(libs/sockets)
 add_subdirectory(libs/http)
-# add_subdirectory(libs/web)
+add_subdirectory(libs/web)
 
 
 

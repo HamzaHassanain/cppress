@@ -3,7 +3,7 @@
 # Exit on any error
 set -e
 
-echo "Building Hamza Web Framework..."
+echo "Building Web Framework..."
 
 # Ensure we're in the project root directory
 cd "$(dirname "$0")"
@@ -19,7 +19,7 @@ mkdir -p build
 
 # Configure the project with CMake
 echo "Configuring CMake..."
-cmake -S . -B build
+cmake -S . -B build -DWEB_STANDALONE=ON
 
 # Build the project
 echo "Building project..."
@@ -28,10 +28,10 @@ make -j$(nproc)
 cd ..
 
 echo "Build completed successfully!"
-echo "Executable location: build/hh_web_framework"
+echo "Executable location: build/web_framework"
 
 # Optionally run the executable if 'run' argument is passed
 if [ "$1" = "run" ]; then
     echo "Running the application..."
-    ./build/hh_web_framework
+    ./build/web_framework
 fi

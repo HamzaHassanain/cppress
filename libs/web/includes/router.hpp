@@ -6,15 +6,14 @@
 #include <type_traits>
 #include <vector>
 
-#include "web_exceptions.hpp"
-#include "web_methods.hpp"
-#include "web_request.hpp"
-#include "web_response.hpp"
-#include "web_types.hpp"
+#include "exceptions.hpp"
+#include "request.hpp"
+#include "response.hpp"
+#include "types.hpp"
 
-namespace hh_web {
+namespace cppress::web {
 template <typename T, typename G>
-class web_route;  // Forward declaration
+class route;  // Forward declaration
 
 /**
  * @brief Template class for managing web routes and middleware chains.
@@ -36,18 +35,18 @@ class web_route;  // Forward declaration
  * 3. Handle exceptions and convert them to appropriate HTTP responses
  * 4. Return success/failure status to the web server
  *
- * @tparam T Type for request objects (must derive from web_request)
- * @tparam G Type for response objects (must derive from web_response)
+ * @tparam T Type for request objects (must derive from request)
+ * @tparam G Type for response objects (must derive from response)
 
  */
-template <typename T = web_request, typename G = web_response>
-class web_router {
+template <typename T = request, typename G = response>
+class router {
 protected:
     /// Collection of registered routes for handling specific path patterns
-    std::vector<std::shared_ptr<web_route<T, G>>> routes;
+    std::vector<std::shared_ptr<route<T, G>>> routes;
 
     /// Collection of middleware handlers executed before route processing
-    std::vector<web_request_handler_t<T, G>> middlewares;
+    std::vector<request_handler_t<T, G>> middlewares;
 
     /**
      * @brief Execute all registered middleware handlers in sequence.
@@ -88,7 +87,7 @@ protected:
                 continue;
             } else {
                 throw std::runtime_error(
-                    "Invalid middleware, return value must of  web_cppress::socketsexit_code\n");
+                    "Invalid middleware, return value must of  cppress::socketsexit_code\n");
             }
         }
 
@@ -96,23 +95,23 @@ protected:
     }
 
 public:
-    /// Allow web_server to access protected members
+    /// Allow server to access protected members
     template <typename, typename, typename>
-    friend class web_server;
+    friend class server;
 
     /**
      * @brief Default constructor with type safety validation.
      *
      * Creates a new web router instance with empty route and middleware collections.
      * Performs compile-time type checking to ensure T and G
-     * derive from the required base classes (web_request and web_response respectively).
+     * derive from the required base classes (request and response respectively).
      *
      * The static assertions prevent template instantiation with incompatible types,
      * ensuring type safety throughout the routing system.
      */
-    web_router() {
-        static_assert(std::is_base_of<web_request, T>::value, "T must derive from web_request");
-        static_assert(std::is_base_of<web_response, G>::value, "G must derive from web_response");
+    router() {
+        static_assert(std::is_base_of<request, T>::value, "T must derive from request");
+        static_assert(std::is_base_of<response, G>::value, "G must derive from response");
     }
 
     /**
@@ -138,10 +137,10 @@ public:
      * - false: No routes matched and middleware didn't handle the request
      *
      * Exception handling:
-     * - web_exception: Converted to HTTP response with proper status code
+     * - exception: Converted to HTTP response with proper status code
      * - std::exception: Converted to 500 Internal Server Error response
      *
-     * @note This method is typically called by the web_server for each incoming request
+     * @note This method is typically called by the server for each incoming request
      */
     virtual bool handle_request(std::shared_ptr<T> request, std::shared_ptr<G> response) {
         try {
@@ -158,15 +157,15 @@ public:
             }
 
             return false;
-        } catch (web_exception& e)  // Unhandled exception thrown from middleware/route handler
+        } catch (exception& e)  // Unhandled exception thrown from middleware/route handler
         {
-            logger::error("Web error in router: " + std::string(e.what()));
-            logger::error("Status code: " + std::to_string(e.get_status_code()) +
+            shared::logger::error("Web error in router: " + std::string(e.what()));
+            shared::logger::error("Status code: " + std::to_string(e.get_status_code()) +
                           " Message: " + e.get_status_message());
             throw;
         } catch (const std::exception& e)  // Unhandled exception
         {
-            logger::error("Unhandled exception in router: " + std::string(e.what()));
+            shared::logger::error("Unhandled exception in router: " + std::string(e.what()));
             throw;
         }
     }
@@ -184,7 +183,7 @@ public:
      *
      * @throws std::invalid_argument if the route path is empty
      */
-    virtual void add_route(std::shared_ptr<web_route<T, G>> route) {
+    virtual void add_route(std::shared_ptr<route<T, G>> route) {
         if (route->get_path().empty()) {
             throw std::invalid_argument("Route path cannot be empty");
         }
@@ -198,36 +197,36 @@ public:
      * Adds a middleware handler to the router's middleware chain. Middleware
      * is executed in the order it's registered, before any route handlers.
      */
-    virtual void use(const web_request_handler_t<T, G>& middleware) {
+    virtual void use(const request_handler_t<T, G>& middleware) {
         middlewares.push_back(middleware);
     }
 
     /// @brief Register a GET route with the router.
     /// @param path The path for the route
     /// @param handlers The request handlers for the route
-    void get(const std::string& path, std::vector<web_request_handler_t<T, G>> handlers) {
-        add_route(std::make_shared<web_route<T, G>>("GET", path, handlers));
+    void get(const std::string& path, std::vector<request_handler_t<T, G>> handlers) {
+        add_route(std::make_shared<route<T, G>>("GET", path, handlers));
     }
 
     /// @brief Register a POST route with the router.
     /// @param path The path for the route
     /// @param handlers The request handlers for the route
-    void post(const std::string& path, std::vector<web_request_handler_t<T, G>> handlers) {
-        add_route(std::make_shared<web_route<T, G>>("POST", path, handlers));
+    void post(const std::string& path, std::vector<request_handler_t<T, G>> handlers) {
+        add_route(std::make_shared<route<T, G>>("POST", path, handlers));
     }
 
     /// @brief Register a PUT route with the router.
     /// @param path The path for the route
     /// @param handlers The request handlers for the route
-    void put(const std::string& path, std::vector<web_request_handler_t<T, G>> handlers) {
-        add_route(std::make_shared<web_route<T, G>>("PUT", path, handlers));
+    void put(const std::string& path, std::vector<request_handler_t<T, G>> handlers) {
+        add_route(std::make_shared<route<T, G>>("PUT", path, handlers));
     }
 
     /// @brief Register a DELETE route with the router.
     /// @param path The path for the route
     /// @param handlers The request handlers for the route
-    void delete_(const std::string& path, std::vector<web_request_handler_t<T, G>> handlers) {
-        add_route(std::make_shared<web_route<T, G>>("DELETE", path, handlers));
+    void delete_(const std::string& path, std::vector<request_handler_t<T, G>> handlers) {
+        add_route(std::make_shared<route<T, G>>("DELETE", path, handlers));
     }
 };
-}  // namespace hh_web
+}  // namespace cppress::web

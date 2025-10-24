@@ -1,7 +1,7 @@
 #pragma once
-#include "../libs/http-server/http-lib.hpp"
+#include "sockets/includes.hpp"
 
-namespace hh_web {
+namespace cppress::web {
 /**
  * @brief Web-specific exception class for HTTP-related errors.
  *
@@ -15,7 +15,7 @@ namespace hh_web {
  * for debugging and logging purposes.
 
  */
-class web_exception : public cppress::socketssocket_exception {
+class exception : public cppress::sockets::socket_exception {
     int status_code = 500;  ///< HTTP status code (default: 500 Internal Server Error)
     std::string status_message = "Internal Server Error";  ///< HTTP status message
     std::string _formatted_message;                        ///< Cached formatted message for what()
@@ -25,10 +25,10 @@ public:
      * @param message Descriptive error message explaining the web operation failure
      *
      * Creates a web exception with default HTTP 500 status code and "Internal Server Error"
-     * message. Uses default type "WEB_EXCEPTION" and function "web_function".
+     * message. Uses default type "WEB_EXCEPTION" and function "function".
      */
-    explicit web_exception(const std::string& message)
-        : socket_exception(message, "WEB_EXCEPTION", "web_function"), _formatted_message(message) {}
+    explicit exception(const std::string& message)
+        : socket_exception(message, "WEB_EXCEPTION", "function"), _formatted_message(message) {}
 
     /**
      * @brief Construct web exception with custom HTTP status.
@@ -38,8 +38,8 @@ public:
      *
      * Creates a web exception with custom HTTP status information for proper client response.
      */
-    explicit web_exception(const std::string& message, int status_code,
-                           const std::string& status_message)
+    explicit exception(const std::string& message, int status_code,
+                       const std::string& status_message)
         : socket_exception(message, "", ""),
           status_code(status_code),
           status_message(status_message),
@@ -54,8 +54,8 @@ public:
      * Creates a web exception with custom type and function information while maintaining
      * default HTTP 500 status code.
      */
-    explicit web_exception(const std::string& message, const std::string& type,
-                           const std::string& function)
+    explicit exception(const std::string& message, const std::string& type,
+                       const std::string& function)
         : socket_exception(message, type, function), _formatted_message(message) {}
 
     /**
@@ -68,9 +68,9 @@ public:
      * Creates a web exception with complete customization of all parameters including
      * HTTP status code while using default status message.
      */
-    explicit web_exception(const std::string& message, const std::string& type,
-                           const std::string& function, int status_code = 500,
-                           std::string status_message = "Internal Server Error")
+    explicit exception(const std::string& message, const std::string& type,
+                       const std::string& function, int status_code = 500,
+                       std::string status_message = "Internal Server Error")
         : socket_exception(message, type, function),
           status_code(status_code),
           status_message(status_message),
@@ -113,4 +113,4 @@ public:
     }
 };
 
-}  // namespace hh_web
+}  // namespace cppress::web

@@ -6,14 +6,14 @@
 #include <string>
 #include <vector>
 
-#include "../libs/http-server/http-lib.hpp"
-#include "logger.hpp"
-namespace hh_web {
+#include "http/includes.hpp"
+#include "shared/includes/logger.hpp"
+namespace cppress::web {
 template <typename T, typename G>
-class web_router;
+class router;
 
 template <typename T, typename G, typename R>
-class web_server;
+class server;
 
 /**
  * @brief High-level web response wrapper with enhanced functionality.
@@ -35,12 +35,12 @@ class web_server;
 
  * @note It is intended to be passed as pointers between the methods, to ensure proper ownership and
  lifetime management.
- * @note Please NEVER Initialize web_response directly, Unless you are overriding the web_servers
+ * @note Please NEVER Initialize response directly, Unless you are overriding the servers
  on_request_received method     */
-class web_response {
+class response {
 protected:
     /// Underlying HTTP response object
-    cppress::http::http_response response;
+    cppress::http::http_response response_;
 
     /// Flag to prevent double-sending of response
     std::atomic<bool> did_end = false;
@@ -58,7 +58,7 @@ protected:
     mutable std::mutex end_response_mutex;
     /**
      * @brief Internal method to end connection with the client, must only be called within
-     * web_server or it's derived classes.
+     * server or it's derived classes.
      *
      * Ensures that this function is only called once by checking the did_end flag.
      */
@@ -71,36 +71,36 @@ protected:
             return;
         try {
             std::lock_guard<std::mutex> lock(end_response_mutex);
-            response.end();
+            response_.end();
         } catch (const std::exception& e) {
             // Log the error using logger
-            logger::error("Error ending response: " + std::string(e.what()));
+            shared::logger::error("Error ending response: " + std::string(e.what()));
         }
     }
 
 public:
-    /// Allow web_server to access private members
+    /// Allow server to access private members
     template <typename T, typename G, typename R>
-    friend class web_server;
+    friend class server;
 
     /**
-     * @brief Private constructor for internal use by web_server.
+     * @brief Private constructor for internal use by server.
      * @param response HTTP response object to wrap (moved)
      *
      * Creates a web response wrapper around the provided HTTP response object.
      * The HTTP response is moved to avoid unnecessary copying and to maintain
      * ownership semantics. Sets default status to 200 OK for convenience.
      */
-    web_response(cppress::http::http_response&& response) : response(std::move(response)) {
-        response.set_status(200, "OK");
+    response(cppress::http::http_response&& response_) : response_(std::move(response_)) {
+        response_.set_status(200, "OK");
     }
     // Copy operations - DELETED for resource safety and unique ownership
-    web_response(const web_response&) = delete;
-    web_response& operator=(const web_response&) = delete;
+    response(const response&) = delete;
+    response& operator=(const response&) = delete;
 
     // Move operations - ENABLED for ownership transfer
-    web_response(web_response&&) = default;
-    web_response& operator=(web_response&&) = default;
+    response(response&&) = default;
+    response& operator=(response&&) = default;
     /**
      * @brief Set the HTTP status code and message.
      * @param status_code Numeric HTTP status code (e.g., 200, 404, 500)
@@ -134,7 +134,7 @@ public:
                 status_message = "Internal Server Error";
             }
         }
-        response.set_status(status_code, status_message);
+        response_.set_status(status_code, status_message);
     }
 
     /**
@@ -149,10 +149,10 @@ public:
     virtual void send_json(const std::string& json_data) {
         {
             std::lock_guard<std::mutex> lock(modify_headers_mutex);
-            response.add_header(cppress::http::HEADER_CONTENT_TYPE, "application/json");
-            response.set_body(json_data);
-            response.add_header(cppress::http::HEADER_CONTENT_LENGTH,
-                                std::to_string(json_data.size()));
+            response_.add_header(cppress::http::consts::HEADER_CONTENT_TYPE, "application/json");
+            response_.set_body(json_data);
+            response_.add_header(cppress::http::consts::HEADER_CONTENT_LENGTH,
+                                 std::to_string(json_data.size()));
         }
         send();
     }
@@ -169,10 +169,10 @@ public:
     virtual void send_html(const std::string& html_data) {
         {
             std::lock_guard<std::mutex> lock(modify_headers_mutex);
-            response.add_header(cppress::http::HEADER_CONTENT_TYPE, "text/html");
-            response.set_body(html_data);
-            response.add_header(cppress::http::HEADER_CONTENT_LENGTH,
-                                std::to_string(html_data.size()));
+            response_.add_header(cppress::http::consts::HEADER_CONTENT_TYPE, "text/html");
+            response_.set_body(html_data);
+            response_.add_header(cppress::http::consts::HEADER_CONTENT_LENGTH,
+                                 std::to_string(html_data.size()));
         }
         send();
     }
@@ -189,10 +189,10 @@ public:
     virtual void send_text(const std::string& text_data) {
         {
             std::lock_guard<std::mutex> lock(modify_headers_mutex);
-            response.add_header(cppress::http::HEADER_CONTENT_TYPE, "text/plain");
-            response.set_body(text_data);
-            response.add_header(cppress::http::HEADER_CONTENT_LENGTH,
-                                std::to_string(text_data.size()));
+            response_.add_header(cppress::http::consts::HEADER_CONTENT_TYPE, "text/plain");
+            response_.set_body(text_data);
+            response_.add_header(cppress::http::consts::HEADER_CONTENT_LENGTH,
+                                 std::to_string(text_data.size()));
         }
         send();
     }
@@ -209,7 +209,7 @@ public:
      */
     virtual void add_header(const std::string& key, const std::string& value) {
         std::lock_guard<std::mutex> lock(modify_headers_mutex);
-        response.add_header(key, value);
+        response_.add_header(key, value);
     }
 
     /**
@@ -223,7 +223,7 @@ public:
      */
     virtual void add_trailer(const std::string& key, const std::string& value) {
         std::lock_guard<std::mutex> lock(modify_headers_mutex);
-        response.add_trailer(key, value);
+        response_.add_trailer(key, value);
     }
 
     /**
@@ -250,7 +250,7 @@ public:
         if (!attributes.empty())
             value += "; " + attributes;
 
-        response.add_header("Set-Cookie", name + "=" + value);
+        response_.add_header("Set-Cookie", name + "=" + value);
     }
 
     /**
@@ -268,7 +268,7 @@ public:
      */
     virtual void set_content_type(const std::string& content_type) {
         std::lock_guard<std::mutex> lock(modify_headers_mutex);
-        response.add_header(cppress::http::HEADER_CONTENT_TYPE, content_type);
+        response_.add_header(cppress::http::consts::HEADER_CONTENT_TYPE, content_type);
     }
 
     /**
@@ -281,7 +281,7 @@ public:
      */
     virtual void set_body(const std::string& body) {
         std::lock_guard<std::mutex> lock(modify_headers_mutex);
-        response.set_body(body);
+        response_.set_body(body);
     }
 
     /**
@@ -326,23 +326,23 @@ public:
             /// Get the lock of the modify_headers_mutex, to ensure that another thread hasn't
             /// modified the headers
             std::lock_guard<std::mutex> lock(modify_headers_mutex);
-            if (response.get_header(cppress::http::HEADER_CONNECTION).empty()) {
-                response.add_header(cppress::http::HEADER_CONNECTION, "close");
+            if (response_.get_header(cppress::http::consts::HEADER_CONNECTION).empty()) {
+                response_.add_header(cppress::http::consts::HEADER_CONNECTION, "close");
             }
-            if (response.get_header(cppress::http::HEADER_CONTENT_TYPE).empty()) {
-                response.add_header(cppress::http::HEADER_CONTENT_TYPE, "text/plain");
+            if (response_.get_header(cppress::http::consts::HEADER_CONTENT_TYPE).empty()) {
+                response_.add_header(cppress::http::consts::HEADER_CONTENT_TYPE, "text/plain");
             }
-            if (response.get_header(cppress::http::HEADER_CONTENT_LENGTH).empty()) {
-                response.add_header(cppress::http::HEADER_CONTENT_LENGTH,
-                                    std::to_string(response.get_body().size()));
+            if (response_.get_header(cppress::http::consts::HEADER_CONTENT_LENGTH).empty()) {
+                response_.add_header(cppress::http::consts::HEADER_CONTENT_LENGTH,
+                                     std::to_string(response_.get_body().size()));
             }
         }
 
         try {
             std::lock_guard<std::mutex> lock(send_response_mutex);
-            response.send();
+            response_.send();
         } catch (const std::exception& e) {
-            logger::error("Error sending response: " + std::string(e.what()));
+            shared::logger::error("Error sending response: " + std::string(e.what()));
             end();
         }
     }
@@ -354,11 +354,11 @@ public:
 
     virtual void set_keep_alive(bool keep_alive) {
         std::lock_guard<std::mutex> lock(modify_headers_mutex);
-        response.clear_header_values("Connection");
+        response_.clear_header_values("Connection");
         if (keep_alive) {
-            response.add_header("Connection", "keep-alive");
+            response_.add_header("Connection", "keep-alive");
         } else {
-            response.add_header("Connection", "close");
+            response_.add_header("Connection", "close");
         }
     }
     /**
@@ -369,8 +369,8 @@ public:
      */
     virtual void set_header(const std::string& name, const std::string& value) {
         std::lock_guard<std::mutex> lock(modify_headers_mutex);
-        response.clear_header_values(name);
-        response.add_header(name, value);
+        response_.clear_header_values(name);
+        response_.add_header(name, value);
     }
 };
-}  // namespace hh_web
+}  // namespace cppress::web

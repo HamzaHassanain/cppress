@@ -1,139 +1,91 @@
-cmake_minimum_required(VERSION 3.10)
-project(hh_web_framework)
-
-# Find Git package for submodule handling
-find_package(Git QUIET)
-
-# Initialize and update git submodules to latest versions
+cmake_minimum_required(VERSION 3.15)
+project(web_framework VERSION 1.0.0)
 
 
-if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-    # Update submodules as needed
-    option(GIT_SUBMODULE "Check submodules during build" ON)
-    option(GIT_SUBMODULE_UPDATE_LATEST "Update submodules to latest remote commits" ON)
+# Source files
+file(GLOB WEB_SOURCES src/*.cpp)
+file(GLOB WEB_HEADERS includes/*.hpp)
+
+
+# Create library target
+if(WEB_STANDALONE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -fsanitize=address -g -O0")
     
-
-    # option(GIT_SUBMODULE OFF)
-    # option(GIT_SUBMODULE_UPDATE_LATEST OFF)
-
-    if(GIT_SUBMODULE)
-        message(STATUS "Initializing and updating submodules...")
-        
-        # First, initialize submodules if they don't exist
-        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
-                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                        RESULT_VARIABLE GIT_SUBMOD_INIT_RESULT)
-        if(NOT GIT_SUBMOD_INIT_RESULT EQUAL "0")
-            message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMOD_INIT_RESULT}, please checkout submodules")
-        endif()
-        
-        # If enabled, update submodules to latest remote commits
-        if(GIT_SUBMODULE_UPDATE_LATEST)
-            message(STATUS "Updating submodules to latest remote commits...")
-            execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --remote --recursive
-                            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                            RESULT_VARIABLE GIT_SUBMOD_UPDATE_RESULT)
-            if(NOT GIT_SUBMOD_UPDATE_RESULT EQUAL "0")
-                message(WARNING "git submodule update --remote --recursive failed with ${GIT_SUBMOD_UPDATE_RESULT}, continuing with current submodule versions")
-            else()
-                message(STATUS "Submodules updated to latest versions successfully")
-            endif()
-        endif()
+    # Create cppress_common interface library FIRST (required by subdirectories)
+    add_library(cppress_common INTERFACE)
+    target_include_directories(cppress_common INTERFACE 
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../shared/includes
+    )
+    
+    # Add dependencies in order: shared first (provides utils), then sockets (depends on shared)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../shared ${CMAKE_CURRENT_BINARY_DIR}/shared_build)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../sockets ${CMAKE_CURRENT_BINARY_DIR}/sockets_build)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../http ${CMAKE_CURRENT_BINARY_DIR}/http_build)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../json ${CMAKE_CURRENT_BINARY_DIR}/json_build)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../html ${CMAKE_CURRENT_BINARY_DIR}/html_build)
+    
+    # Standalone executable for testing
+    add_executable(web_framework app.cpp ${WEB_SOURCES})
+    
+    # Link libraries in dependency order
+    target_link_libraries(web_framework PUBLIC sockets cppress_shared_utils http json html)
+    
+    # Apply sanitizer flags if enabled
+    if(SANITIZER AND NOT WIN32 AND SANITIZER_FLAGS)
+        target_compile_options(web_framework PRIVATE ${SANITIZER_FLAGS})
+        target_link_options(web_framework PRIVATE ${SANITIZER_LINK_FLAGS})
+        message(STATUS "Applied sanitizer flags to standalone web_framework executable")
+    endif()
+else()
+    # Library mode
+    add_library(web_framework STATIC ${WEB_SOURCES})
+    add_library(cppress::web_framework ALIAS web_framework)
+    
+    # Link to common dependencies (in library mode, cppress_common is provided by parent)
+    target_link_libraries(web_framework PUBLIC cppress_common)
+    
+    # Apply sanitizer flags if enabled
+    if(SANITIZER AND NOT WIN32 AND SANITIZER_FLAGS)
+        target_compile_options(web_framework PUBLIC ${SANITIZER_FLAGS})
+        target_link_options(web_framework PUBLIC ${SANITIZER_LINK_FLAGS})
+        message(STATUS "Applied sanitizer flags to web_framework library")
     endif()
 endif()
 
-# Check if submodules exist
-set(REQUIRED_SUBMODULES "http-server" "html-builder" "json")  # Add more submodules here as needed
-foreach(submodule ${REQUIRED_SUBMODULES})
-    if(NOT EXISTS "${PROJECT_SOURCE_DIR}/libs/${submodule}/CMakeLists.txt")
-        message(FATAL_ERROR "The ${submodule} submodule was not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
-    endif()
-endforeach()
+target_include_directories(web_framework PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../>
+    $<INSTALL_INTERFACE:include>
+)
 
 
 
+# Installation
+if(NOT WEB_STANDALONE)
+    install(TARGETS web_framework
+        EXPORT cppressTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+    
+    install(DIRECTORY includes/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cppress/web_framework
+    )
 
-# Function to read .env file and set variables
-function(load_env_file env_file)
-    if(EXISTS ${env_file})
-        file(READ ${env_file} ENV_CONTENT)
-        string(REPLACE "\n" ";" ENV_LINES ${ENV_CONTENT})
-        
-        foreach(line ${ENV_LINES})
-            # Skip empty lines and comments
-            if(line AND NOT line MATCHES "^#")
-                string(FIND ${line} "=" eq_pos)
-                if(eq_pos GREATER -1)
-                    string(SUBSTRING ${line} 0 ${eq_pos} var_name)
-                    math(EXPR val_start "${eq_pos} + 1")
-                    string(SUBSTRING ${line} ${val_start} -1 var_value)
-                    
-                    # Remove any whitespace
-                    string(STRIP ${var_name} var_name)
-                    string(STRIP ${var_value} var_value)
-                    
-                    # Set the variable in parent scope
-                    set(${var_name} ${var_value} PARENT_SCOPE)
-                    message(STATUS "Loaded env variable: ${var_name}=${var_value}")
-                endif()
-            endif()
-        endforeach()
-    else()
-        message(WARNING ".env file not found at ${env_file}")
-    endif()
-endfunction()
 
-# Load environment variables from .env file
-load_env_file(${CMAKE_SOURCE_DIR}/.env)
+    install(FILES includes.hpp
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cppress/web_framework
+    )
 
-# define a variable called debug, that I can acess in a c++ code, to enable debugging
-set(DEBUG_MODE ON CACHE BOOL "Enable Debug Mode") 
-
-if(DEBUG_MODE)
-    add_definitions(-DDEBUG_MODE)
 endif()
 
-# add debuging for c++ gcc
 
-# if(WEB_LOCAL_TEST AND WEB_LOCAL_TEST STREQUAL "1")
-#     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -fsanitize=address -g -O0")
-# else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+# if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+#     enable_testing()
+#     add_subdirectory(tests)
 # endif()
 
 
-file(GLOB SRC_FILES src/*.cpp)
 
-# link all cpp files inside framework folder, framework/src
-
-set(CMAKE_CXX_STANDARD 17)
-
-
-
-# Add subdirectories for each submodule
-foreach(submodule ${REQUIRED_SUBMODULES})
-    # Temporarily suppress warnings for submodules
-    set(CMAKE_CXX_FLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")  # Suppress all warnings for submodules
-    add_subdirectory(libs/${submodule})
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")  # Restore warnings for main project
-endforeach()
-
-
-
-if(WEB_LOCAL_TEST AND WEB_LOCAL_TEST STREQUAL "1")
-    add_executable(  hh_web_framework example.cpp ${SRC_FILES}   )
-else()
-    add_library(hh_web_framework STATIC ${SRC_FILES})
-endif()
-
-target_compile_definitions(hh_web_framework PRIVATE CPP_PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}/")
-
-
-# Find and link pthread
-find_package(Threads REQUIRED)
-target_link_libraries(hh_web_framework Threads::Threads)
-
-# Link libraries for each submodule
-set(SUBMODULE_LIBRARIES "http_server" "html" "json")  # Add more library names here as needed
-target_link_libraries(hh_web_framework ${SUBMODULE_LIBRARIES})

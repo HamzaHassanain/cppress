@@ -4,13 +4,13 @@
 #include <type_traits>
 #include <vector>
 
-#include "web_exceptions.hpp"
-#include "web_types.hpp"
-#include "web_utilities.hpp"
+#include "exceptions.hpp"
+#include "types.hpp"
+#include "utilities.hpp"
 
-namespace hh_web {
+namespace cppress::web {
 template <typename T, typename G>
-class web_router;  // Forward declaration
+class router;  // Forward declaration
 
 /**
  * @brief Template class representing a web route with request handlers.
@@ -29,12 +29,12 @@ class web_router;  // Forward declaration
  * - With Query parameters: "/api/users?id=123"
  * - Multiple handlers for middleware chains
  *
- * @tparam T Type for request objects (must derive from web_request)
- * @tparam G Type for response objects (must derive from web_response)
+ * @tparam T Type for request objects (must derive from request)
+ * @tparam G Type for response objects (must derive from response)
 
  */
-template <typename T = web_request, typename G = web_response>
-class web_route {
+template <typename T = request, typename G = response>
+class route {
 protected:
     /// HTTP method for this route (GET, POST, PUT, DELETE, etc.)
     std::string method;
@@ -43,11 +43,11 @@ protected:
     std::string expression;
 
     /// Collection of request handlers executed in sequence for this route
-    std::vector<web_request_handler_t<T, G>> handlers;
+    std::vector<request_handler_t<T, G>> handlers;
 
 public:
-    /// Allow web_router to access private members
-    friend class web_router<T, G>;
+    /// Allow router to access private members
+    friend class router<T, G>;
 
     /**
      * @brief Construct a web route with method, path expression, and handlers.
@@ -60,16 +60,16 @@ public:
      * this route, allowing for middleware chains and complex request processing.
      *
      * The constructor performs compile-time type checking to ensure T and
-     * G derive from the base web_request and web_response classes respectively.
+     * G derive from the base request and response classes respectively.
      * It also validates that at least one handler is provided.
      *
      * @throws std::invalid_argument if no handlers are provided
      */
-    web_route(const std::string& method, const std::string& expression,
-              const std::vector<web_request_handler_t<T, G>>& handlers)
+    route(const std::string& method, const std::string& expression,
+          const std::vector<request_handler_t<T, G>>& handlers)
         : method(method), expression(expression), handlers(std::move(handlers)) {
-        static_assert(std::is_base_of<web_request, T>::value, "T must derive from web_request");
-        static_assert(std::is_base_of<web_response, G>::value, "G must derive from web_response");
+        static_assert(std::is_base_of<request, T>::value, "T must derive from request");
+        static_assert(std::is_base_of<response, G>::value, "G must derive from response");
         if (this->handlers.size() == 0) {
             throw std::invalid_argument("At least one handler must be provided");
         }
@@ -103,7 +103,7 @@ public:
      * against this route's configured method and path expression, then sets the path parameters if
      * existing ones are found.
      *
-     * @note This function is called by the web_router class to determine
+     * @note This function is called by the router class to determine
      * if a request matches this route.
      */
     virtual bool match(std::shared_ptr<T> request) const {
@@ -126,8 +126,8 @@ public:
      * - EXIT: Stop processing and finalize the response
      * - ERROR: Indicate an error condition
      *
-     *@note This function is called by the web_router class if a matching route is found.
-     *@note This is a const member function, meaning it does not modify the state of the web_route
+     *@note This function is called by the router class if a matching route is found.
+     *@note This is a const member function, meaning it does not modify the state of the route
      * instance.
      */
     virtual exit_code handle_request(std::shared_ptr<T> request,
@@ -142,7 +142,7 @@ public:
                 continue;
             } else {
                 throw std::runtime_error(
-                    "Invalid route handler, return value must of  web_cppress::socketsexit_code\n");
+                    "Invalid route handler, return value must of  cppress::socketsexit_code\n");
             }
         }
 
@@ -150,6 +150,6 @@ public:
     }
 
     /// Default virtual destructor for proper cleanup in inheritance hierarchies
-    ~web_route() = default;
+    ~route() = default;
 };
-}  // namespace hh_web
+}  // namespace cppress::web

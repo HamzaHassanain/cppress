@@ -1,22 +1,11 @@
 #pragma once
 
-#include <map>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
-namespace cppress::shared {
-
-namespace methods {
-constexpr const char* GET = "GET";
-constexpr const char* POST = "POST";
-constexpr const char* PUT = "PUT";
-constexpr const char* DELETE_ = "DELETE";
-constexpr const char* HEAD = "HEAD";
-constexpr const char* OPTIONS = "OPTIONS";
-constexpr const char* PATCH = "PATCH";
-};  // namespace methods
-
+namespace cppress::web {
 /**
  * @brief List of known static file extensions that should be treated as static resources.
  *
@@ -33,7 +22,18 @@ extern const std::vector<std::string> static_extensions;
  * header when serving static files. If an extension is not found the default
  * MIME type "application/octet-stream" should be used.
  */
-extern const std::map<std::string, std::string> mime_types;
+extern const std::unordered_map<std::string, std::string> mime_types;
+
+/**
+ * @brief Extract query parameters from a URI.
+ * @param uri Full request URI
+ * @return Vector of name-value pairs representing query parameters
+ *
+ * This function parses the query string portion of the URI and extracts
+ * all query parameters as name-value pairs. It handles URL decoding
+ * and proper parameter separation.
+ */
+std::vector<std::pair<std::string, std::string>> get_query_parameters(const std::string& uri);
 
 /**
  * @brief URL-encode a string according to RFC 3986.
@@ -90,31 +90,54 @@ std::string sanitize_path(const std::string& path);
 std::string trim(const std::string& str);
 
 /**
- * @brief Check if an HTTP method is unknown.
- * @param method HTTP method string (e.g., "GET", "POST")
- * @return true if the method is unknown, false otherwise
+ * @brief Check whether a URI points to a static resource by extension.
+ * @param uri Request URI
+ * @return true if URI extension is in the static_extensions list
  */
-bool unknown_method(const std::string& method);
+bool is_uri_static(const std::string& uri);
 
 /**
- * @brief Convert a string to lowercase.
- * @param str Input string
- * @return Lowercase version of the input string
+ * @brief Extract parameter names from a route expression.
+ * @param uri Route expression or URI containing parameter placeholders (e.g., "/users/:id")
+ * @return Vector of pairs {param_name, value} where value is empty when only names are extracted
+ *
+ * Note: This utility only extracts parameter names when the input contains
+ * placeholders like ":id". Resolving parameter values from an actual request
+ * path requires matching against the route expression and is typically done
+ * by the router during request handling.
  */
-std::string to_lowercase(const std::string& str);
+std::vector<std::pair<std::string, std::string>> get_path_params(const std::string& uri);
 
 /**
- * @brief Convert a string to uppercase.
- * @param str Input string
- * @return Uppercase version of the input string
+ * @brief Extract the path component (without query) from a URI.
+ * @param uri Full request URI
+ * @return Path portion of the URI (everything before '?')
  */
-std::string to_uppercase(const std::string& str);
+std::string get_path(const std::string& uri);
 
 /**
- * @brief Get the current working directory object
- *        It just calls the appropriate system function to get it
- * @return the current working directory as a string
+ * @brief Match a route expression against a request path.
+ * @param expression Route expression (may include ":param" and "*" wildcard)
+ * @param rhs Actual request path to test
+ * @return true if the expression matches the path, false otherwise
+ *
+ * The rule set implemented by match_path supports:
+ * - Exact segment match
+ * - Named parameters using leading ':' (matches a single segment)
  */
-std::string get_current_working_directory();
+std::pair<bool, std::vector<std::pair<std::string, std::string>>> match_path(
+    const std::string& expression, const std::string& rhs);
 
-}  // namespace cppress::shared
+
+
+/**
+ * @brief Check if the request body contains malicious content.
+ *
+ * @param body The request body as a string
+ * @return true if malicious content is detected
+ * @return false if the body is clean
+ */
+
+bool body_has_malicious_content(const std::string& body, bool XSS = true, bool SQL = true,
+                                bool CMD = true);
+}  // namespace cppress::web

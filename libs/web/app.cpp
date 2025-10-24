@@ -7,35 +7,37 @@
 #include <string>
 #include <vector>
 
-#include "libs/html-builder/html-builder.hpp"
-#include "libs/json/json-parser.hpp"
-#include "web-lib.hpp"
+#include "includes.hpp"
+#include "libs/html/includes.hpp"
+#include "libs/json/includes.hpp"
+#include "shared/includes/logger.hpp"
+#include "shared/includes/utils.hpp"
 
 using namespace cppress;
-// using hh_web::methods::DELETE;
-using hh_web::methods::GET;
-using hh_web::methods::POST;
-using hh_web::methods::PUT;
+// using cppress::web::methods::DELETE;
+using cppress::shared::methods::GET;
+using cppress::shared::methods::POST;
+using cppress::shared::methods::PUT;
 #include "ItemStore.hpp"
 
-int get_id_from_request(const std::shared_ptr<hh_web::web_request>& req) {
+int get_id_from_request(const std::shared_ptr<web::request>& req) {
     auto params = req->get_path_params();
     for (const auto& [key, value] : params) {
         if (key == "id") {
             try {
                 return std::stoi(value);
             } catch (const std::exception& e) {
-                throw hh_web::web_exception("Invalid ID parameter: " + value, "BAD_REQUEST",
-                                            "get_id_from_request", 400, "Bad Request");
+                throw web::exception("Invalid ID parameter: " + value, "BAD_REQUEST",
+                                     "get_id_from_request", 400, "Bad Request");
             }
         }
     }
-    throw hh_web::web_exception("ID parameter missing", "BAD_REQUEST", "get_id_from_request", 400,
-                                "Bad Request");
+    throw web::exception("ID parameter missing", "BAD_REQUEST", "get_id_from_request", 400,
+                         "Bad Request");
 }
 
-hh_web::exit_code delete_item_handler(std::shared_ptr<hh_web::web_request> req,
-                                      std::shared_ptr<hh_web::web_response> res) {
+web::exit_code delete_item_handler(std::shared_ptr<web::request> req,
+                                   std::shared_ptr<web::response> res) {
     try {
         int id = get_id_from_request(req);
         get_item_store().remove(id);
@@ -47,20 +49,19 @@ hh_web::exit_code delete_item_handler(std::shared_ptr<hh_web::web_request> req,
         res->set_status(204, "No Content");
 
         // That's it! Don't add any content for 204 responses
-        return hh_web::exit_code::EXIT;
-    } catch (hh_web::web_exception& e) {
+        return web::exit_code::EXIT;
+    } catch (web::exception& e) {
         res->set_status(e.get_status_code(), e.get_status_message());
         res->send_json("{\"error\": \"" + std::string("Item Not Found") + "\"}");
-        return hh_web::exit_code::EXIT;
+        return web::exit_code::EXIT;
     } catch (const std::exception& e) {
         res->set_status(500, "Internal Server Error");
         res->send_json("{\"error\": \"Failed to delete item\"}");
-        return hh_web::exit_code::EXIT;
+        return web::exit_code::EXIT;
     }
 }
 
-hh_web::exit_code CORS(std::shared_ptr<hh_web::web_request> req,
-                       std::shared_ptr<hh_web::web_response> res) {
+web::exit_code CORS(std::shared_ptr<web::request> req, std::shared_ptr<web::response> res) {
     // only allow => http://localhost:4000 to GET,DELETE,POST,PUT,
     // any other origin just GET
     auto origins = req->get_header("Origin");
@@ -75,11 +76,11 @@ hh_web::exit_code CORS(std::shared_ptr<hh_web::web_request> req,
         res->add_header("Access-Control-Allow-Headers", "Content-Type");
     }
 
-    return hh_web::exit_code::CONTINUE;
+    return cppress::web::exit_code::CONTINUE;
 }
 
-hh_web::exit_code get_all_items_handler(std::shared_ptr<hh_web::web_request> req,
-                                        std::shared_ptr<hh_web::web_response> res) {
+cppress::web::exit_code get_all_items_handler(std::shared_ptr<cppress::web::request> req,
+                                              std::shared_ptr<cppress::web::response> res) {
     try {
         auto items = get_item_store().get_all();
 
@@ -97,16 +98,16 @@ hh_web::exit_code get_all_items_handler(std::shared_ptr<hh_web::web_request> req
         res->set_status(200, "OK");
         res->set_content_type("application/json");
         res->set_body(ss.str());
-        return hh_web::exit_code::EXIT;
+        return cppress::web::exit_code::EXIT;
     } catch (const std::exception& e) {
         res->set_status(500, "Internal Server Error");
         res->set_content_type("application/json");
         res->set_body("{\"error\": \"Failed to retrieve items\"}");
-        return hh_web::exit_code::EXIT;
+        return cppress::web::exit_code::EXIT;
     }
 }
-hh_web::exit_code get_specific_item_handler(std::shared_ptr<hh_web::web_request> req,
-                                            std::shared_ptr<hh_web::web_response> res) {
+cppress::web::exit_code get_specific_item_handler(std::shared_ptr<cppress::web::request> req,
+                                                  std::shared_ptr<cppress::web::response> res) {
     try {
         int id = get_id_from_request(req);
         auto item = get_item_store().get(id);
@@ -114,31 +115,31 @@ hh_web::exit_code get_specific_item_handler(std::shared_ptr<hh_web::web_request>
         res->set_status(200, "OK");
         res->set_content_type("application/json");
         res->set_body(item.to_json());
-        return hh_web::exit_code::EXIT;
-    } catch (hh_web::web_exception& e) {
+        return cppress::web::exit_code::EXIT;
+    } catch (cppress::web::exception& e) {
         res->set_status(e.get_status_code(), e.get_status_message());
         res->set_content_type("application/json");
         res->set_body("{\"error\": \"" + std::string(e.what()) + "\"}");
-        return hh_web::exit_code::EXIT;
+        return cppress::web::exit_code::EXIT;
     } catch (const std::exception& e) {
         res->set_status(500, "Internal Server Error");
         res->set_content_type("application/json");
         res->set_body("{\"error\": \"Failed to retrieve item\"}");
-        return hh_web::exit_code::EXIT;
+        return cppress::web::exit_code::EXIT;
     }
 }
 
-hh_web::exit_code create_new_item_handler(std::shared_ptr<hh_web::web_request> req,
-                                          std::shared_ptr<hh_web::web_response> res) {
+cppress::web::exit_code create_new_item_handler(std::shared_ptr<cppress::web::request> req,
+                                                std::shared_ptr<cppress::web::response> res) {
     try {
         std::string name, description;
         double price;
 
-        auto json = parse(req->get_body());
+        auto json = json::parse(req->get_body());
 
-        name = getter::get_string(json["name"]);
-        description = getter::get_string(json["description"]);
-        price = getter::get_number(json["price"]);
+        name = json::getter::get_string(json["name"]);
+        description = json::getter::get_string(json["description"]);
+        price = json::getter::get_number(json["price"]);
 
         int id = get_item_store().create(name, description, price);
         auto item = get_item_store().get(id);
@@ -148,36 +149,36 @@ hh_web::exit_code create_new_item_handler(std::shared_ptr<hh_web::web_request> r
         res->set_status(201, "Created");
         res->set_content_type("application/json");
         res->set_body(item.to_json());
-        return hh_web::exit_code::EXIT;
-    } catch (hh_web::web_exception& e) {
+        return cppress::web::exit_code::EXIT;
+    } catch (cppress::web::exception& e) {
         res->set_status(e.get_status_code(), e.get_status_message());
         res->set_content_type("application/json");
-        json_object json_error;
-        json_error.insert("error", maker::make_string("Failed To Create Item"));
+        json::json_object json_error;
+        json_error.insert("error", json::maker::make_string("Failed To Create Item"));
         res->set_body(json_error.stringify());
-        return hh_web::exit_code::EXIT;
+        return cppress::web::exit_code::EXIT;
     } catch (const std::exception& e) {
         res->set_status(500, "Internal Server Error");
         res->set_content_type("application/json");
-        json_object json_error;
+        json::json_object json_error;
         json_error.insert("error",
-                          maker::make_string("Failed To Create Item, Internal Server Error"));
+                          json::maker::make_string("Failed To Create Item, Internal Server Error"));
         res->set_body(json_error.stringify());
-        return hh_web::exit_code::EXIT;
+        return cppress::web::exit_code::EXIT;
     }
 }
 
-hh_web::exit_code update_item_handler(std::shared_ptr<hh_web::web_request> req,
-                                      std::shared_ptr<hh_web::web_response> res) {
+cppress::web::exit_code update_item_handler(std::shared_ptr<cppress::web::request> req,
+                                            std::shared_ptr<cppress::web::response> res) {
     try {
         int id = get_id_from_request(req);
         std::string name, description;
         double price;
 
-        auto json = parse(req->get_body());
-        name = getter::get_string(json["name"]);
-        description = getter::get_string(json["description"]);
-        price = getter::get_number(json["price"]);
+        auto json = json::parse(req->get_body());
+        name = json::getter::get_string(json["name"]);
+        description = json::getter::get_string(json["description"]);
+        price = json::getter::get_number(json["price"]);
 
         get_item_store().update(id, name, description, price);
         auto item = get_item_store().get(id);
@@ -185,26 +186,26 @@ hh_web::exit_code update_item_handler(std::shared_ptr<hh_web::web_request> req,
         res->set_status(200, "OK");
         res->set_content_type("application/json");
         res->set_body(item.to_json());
-        return hh_web::exit_code::EXIT;
-    } catch (hh_web::web_exception& e) {
+        return cppress::web::exit_code::EXIT;
+    } catch (cppress::web::exception& e) {
         res->set_status(e.get_status_code(), e.get_status_message());
         res->set_content_type("application/json");
-        json_object json_error;
-        json_error.insert("error", maker::make_string("Failed To Update Item"));
+        json::json_object json_error;
+        json_error.insert("error", json::maker::make_string("Failed To Update Item"));
         res->set_body(json_error.stringify());
-        return hh_web::exit_code::EXIT;
+        return cppress::web::exit_code::EXIT;
     } catch (const std::exception& e) {
         res->set_status(500, "Internal Server Error");
         res->set_content_type("application/json");
-        json_object json_error;
-        json_error.insert("error", maker::make_string("Failed To Update Item"));
+        json::json_object json_error;
+        json_error.insert("error", json::maker::make_string("Failed To Update Item"));
         res->set_body(json_error.stringify());
-        return hh_web::exit_code::EXIT;
+        return cppress::web::exit_code::EXIT;
     }
 }
 
-hh_web::exit_code index_handler(std::shared_ptr<hh_web::web_request> req,
-                                std::shared_ptr<hh_web::web_response> res) {
+cppress::web::exit_code index_handler(std::shared_ptr<cppress::web::request> req,
+                                      std::shared_ptr<cppress::web::response> res) {
     std::string html_doc = R"(
         
         <!DOCTYPE html>
@@ -245,11 +246,11 @@ hh_web::exit_code index_handler(std::shared_ptr<hh_web::web_request> req,
 
     res->set_status(200, "OK");
     res->send_html(html_doc);
-    return hh_web::exit_code::EXIT;
+    return cppress::web::exit_code::EXIT;
 }
 
-hh_web::exit_code un_matched_route_handler(std::shared_ptr<hh_web::web_request> req,
-                                           std::shared_ptr<hh_web::web_response> res) {
+cppress::web::exit_code un_matched_route_handler(std::shared_ptr<cppress::web::request> req,
+                                                 std::shared_ptr<cppress::web::response> res) {
     res->set_status(404, "Not Found");
 
     // For API requests, return JSON
@@ -281,35 +282,36 @@ hh_web::exit_code un_matched_route_handler(std::shared_ptr<hh_web::web_request> 
         res->send_html(four04);
     }
 
-    return hh_web::exit_code::EXIT;
+    return cppress::web::exit_code::EXIT;
 }
 
-hh_web::exit_code json_cheacker(std::shared_ptr<hh_web::web_request> req,
-                                std::shared_ptr<hh_web::web_response> res) {
+cppress::web::exit_code json_cheacker(std::shared_ptr<cppress::web::request> req,
+                                      std::shared_ptr<cppress::web::response> res) {
     try {
-        if (hh_web::body_has_malicious_content(req->get_body())) {
-            hh_web::logger::error("Malicious content detected");
-            hh_web::logger::error("Body:\n" + req->get_body());
-            hh_web::logger::error("\n\n");
-            throw hh_web::web_exception("Malicious content detected", 500, "Internal Server Error");
+        if (cppress::web::body_has_malicious_content(req->get_body())) {
+            cppress::shared::logger::error("Malicious content detected");
+            cppress::shared::logger::error("Body:\n" + req->get_body());
+            cppress::shared::logger::error("\n\n");
+            throw cppress::web::exception("Malicious content detected", 500,
+                                          "Internal Server Error");
         }
-        return hh_web::exit_code::CONTINUE;
-    } catch (hh_web::web_exception& e) {
+        return cppress::web::exit_code::CONTINUE;
+    } catch (cppress::web::exception& e) {
         res->set_status(e.get_status_code(), e.get_status_message());
         res->set_content_type("application/json");
-        json_object json_error;
-        json_error.insert("error", maker::make_string("Malicious content detected"));
+        json::json_object json_error;
+        json_error.insert("error", json::maker::make_string("Malicious content detected"));
         res->set_body(json_error.stringify());
 
-        return hh_web::exit_code::EXIT;
+        return cppress::web::exit_code::EXIT;
     } catch (const std::exception& e) {
         res->set_status(400, "Bad Request");
         res->set_content_type("application/json");
         res->set_body("{\"error\": \"Invalid JSON format\"}");
-        return hh_web::exit_code::EXIT;
+        return cppress::web::exit_code::EXIT;
     }
 
-    return hh_web::exit_code::EXIT;
+    return cppress::web::exit_code::EXIT;
 }
 
 // Main application entry point
@@ -317,9 +319,9 @@ int main() {
     try {
         int port = 3000;
         std::string host = "0.0.0.0";
-        // hh_web::logger::absolute_path_to_logs =
+        // cppress::shared::logger::absolute_path_to_logs =
         // "C:\\Users\\hamza\\Documnets\\Projects\\hamza-backend-web-library-cpp\\logs\\";
-        // hh_web::logger::enabled_logging = true;
+        // cppress::shared::logger::enabled_logging = true;
         // cppress::http::config::MAX_BODY_SIZE = 1024 * 64;
         // cppress::http::config::MAX_HEADER_SIZE = 1024 * 4;
         // cppress::http::config::MAX_IDLE_TIME_SECONDS = std::chrono::seconds(60);
@@ -331,44 +333,44 @@ int main() {
         // wait
 
         // Create server instance
-        auto server = std::make_shared<hh_web::web_server<>>(port, host);
+        auto server = std::make_shared<cppress::web::server<>>(port, host);
 
         // Create API router
-        auto api_router = std::make_shared<hh_web::web_router<>>();
+        auto api_router = std::make_shared<cppress::web::router<>>();
 
         // CORS middleware
         api_router->use(CORS);
 
         // Define routes for items API
-        using V = std::vector<hh_web::web_request_handler_t<>>;
-        using hh_web::web_route;
+        using V = std::vector<cppress::web::request_handler_t<>>;
+        using cppress::web::route;
 
         // GET /api/items - Get all items
         auto all_items_route =
-            std::make_shared<web_route<>>(GET, "/api/items", V({get_all_items_handler}));
+            std::make_shared<route<>>(GET, "/api/items", V({get_all_items_handler}));
 
         api_router->add_route(all_items_route);
 
         // GET /api/items/:id - Get specific item
         auto specific_item_route =
-            std::make_shared<web_route<>>(GET, "/api/items/:id", V({get_specific_item_handler}));
+            std::make_shared<route<>>(GET, "/api/items/:id", V({get_specific_item_handler}));
 
         api_router->add_route(specific_item_route);
 
         // POST /api/items - Create new item
-        auto create_new_item_route = std::make_shared<web_route<>>(
+        auto create_new_item_route = std::make_shared<route<>>(
             POST, "/api/items", V({json_cheacker, create_new_item_handler}));
         api_router->add_route(create_new_item_route);
 
         // PUT /api/items/:id - Update item
-        auto update_item_route = std::make_shared<web_route<>>(
-            PUT, "/api/items/:id", V({json_cheacker, update_item_handler}));
+        auto update_item_route = std::make_shared<route<>>(PUT, "/api/items/:id",
+                                                           V({json_cheacker, update_item_handler}));
         api_router->add_route(update_item_route);
 
         // DELETE /api/items/:id - Delete item
         api_router->delete_("/api/items/:id", V({delete_item_handler}));
 
-        auto index = std::make_shared<web_route<>>(GET, "/", V({index_handler}));
+        auto index = std::make_shared<route<>>(GET, "/", V({index_handler}));
 
         api_router->add_route(index);
 
@@ -376,16 +378,17 @@ int main() {
         server->use_router(api_router);
 
         // Register static files directory
-        server->use_static("static");
+        std::string current_dir = shared::get_current_working_directory();
+        server->use_static(current_dir + "/static");
 
         // Custom 404 handler
         server->use_default(un_matched_route_handler);
 
         server->use_headers_received([](HEADER_RECEIVED_PARAMS) {
-            hh_web::logger::info("Headers received");
-            hh_web::logger::info(method + " " + uri + " " + version);
+            cppress::shared::logger::info("Headers received");
+            cppress::shared::logger::info(method + " " + uri + " " + version);
             for (const auto& [key, value] : headers) {
-                hh_web::logger::info("Header: " + key + " = " + value);
+                cppress::shared::logger::info("Header: " + key + " = " + value);
             }
         });
 

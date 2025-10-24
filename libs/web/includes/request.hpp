@@ -6,15 +6,16 @@
 #include <utility>
 #include <vector>
 
-#include "../libs/http-server/http-lib.hpp"
-#include "web_exceptions.hpp"
-#include "web_utilities.hpp"
-namespace hh_web {
+#include "exceptions.hpp"
+#include "http/includes.hpp"
+#include "utilities.hpp"
+
+namespace cppress::web {
 template <typename T, typename G>
-class web_router;
+class router;
 
 template <typename T, typename G, typename R>
-class web_server;
+class server;
 
 /**
  * @brief High-level web request wrapper with enhanced functionality.
@@ -33,13 +34,13 @@ class web_server;
  *       the path parameters, which can be modified.
  * @note It is intended to be passed as pointers between the methods, to ensure proper ownership and
  * lifetime management.
- * @note Please NEVER Initialize web_request directly, Unless you are overriding the web_servers
+ * @note Please NEVER Initialize request directly, Unless you are overriding the servers
  * on_request_received method
  */
-class web_request {
+class request {
 protected:
     /// Underlying HTTP request object
-    cppress::http::http_request request;
+    cppress::http::http_request request_;
 
     /// Path parameters extracted from the request URI, in the form of key-value pairs
     /// http://localhost/users/:id/posts/:postID
@@ -54,9 +55,9 @@ protected:
     std::map<std::string, std::string> request_params;
 
 public:
-    /// Allow web_server to access private members
+    /// Allow server to access private members
     template <typename T, typename G, typename R>
-    friend class web_server;
+    friend class server;
 
     /**
      * @brief Construct web request from HTTP request.
@@ -67,15 +68,15 @@ public:
      * ownership semantics. This constructor is typically called by the web
      * server when processing incoming requests.
      */
-    web_request(cppress::http::http_request&& req) : request(std::move(req)) {}
+    request(cppress::http::http_request&& req) : request_(std::move(req)) {}
 
     // Copy operations - DELETED for resource safety and unique ownership
-    web_request(const web_request&) = delete;
-    web_request& operator=(const web_request&) = delete;
+    request(const request&) = delete;
+    request& operator=(const request&) = delete;
 
     // Move operations - ENABLED for ownership transfer
-    web_request(web_request&&) = default;
-    web_request& operator=(web_request&&) = default;
+    request(request&&) = default;
+    request& operator=(request&&) = default;
 
     /**
      * @brief Extract path parameters from the request URI.
@@ -94,7 +95,7 @@ public:
 
     /**
      * @brief Set the path params object
-     * @note please only call this method from the web_route class, otherwise you will never know
+     * @note please only call this method from the route class, otherwise you will never know
      * the path parameters
      * @param params The new path parameters to set
      */
@@ -111,7 +112,7 @@ public:
      * GET for data retrieval, POST for data submission, PUT for updates,
      * DELETE for removal operations, etc.
      */
-    virtual std::string get_method() const { return request.get_method(); }
+    virtual std::string get_method() const { return request_.get_method(); }
 
     /**
      * @brief Get the path component of the request URI.
@@ -123,7 +124,7 @@ public:
      *
      * Example: For URI "/api/users?page=1&limit=10", returns "/api/users"
      */
-    virtual std::string get_path() const { return hh_web::get_path(request.get_uri()); }
+    virtual std::string get_path() const { return cppress::web::get_path(request_.get_uri()); }
 
     /**
      * @brief Get the complete request URI.
@@ -132,7 +133,7 @@ public:
      * Returns the complete URI as received in the HTTP request, including
      * path, query parameters, and any other URI components.
      */
-    virtual std::string get_uri() const { return request.get_uri(); }
+    virtual std::string get_uri() const { return request_.get_uri(); }
 
     /**
      * @brief Extract query parameters from the request URI.
@@ -146,7 +147,7 @@ public:
      * [{"q", "example"}, {"category", "news"}, {"page", "2"}]
      */
     virtual std::vector<std::pair<std::string, std::string>> get_query_parameters() const {
-        return hh_web::get_query_parameters(request.get_uri());
+        return cppress::web::get_query_parameters(request_.get_uri());
     }
 
     /// @brief Get a specific query parameter by name.
@@ -170,7 +171,7 @@ public:
      * This information can be useful for implementing version-specific
      * features or optimizations.
      */
-    virtual std::string get_version() const { return request.get_version(); }
+    virtual std::string get_version() const { return request_.get_version(); }
 
     /**
      * @brief Get all values for a specific header.
@@ -185,7 +186,7 @@ public:
      * a vector with the complete value string.
      */
     virtual std::vector<std::string> get_header(const std::string& name) const {
-        return request.get_header(name);
+        return request_.get_header(name);
     }
 
     /**
@@ -197,7 +198,7 @@ public:
      * collection for processing or forwarding.
      */
     virtual std::vector<std::pair<std::string, std::string>> get_headers() const {
-        return request.get_headers();
+        return request_.get_headers();
     }
 
     /**
@@ -208,7 +209,7 @@ public:
      * and PUT requests, this typically contains form data, JSON, XML,
      * or other payload formats. For GET requests, the body is usually empty.
      */
-    virtual std::string get_body() const { return request.get_body(); }
+    virtual std::string get_body() const { return request_.get_body(); }
 
     /**
      * @brief Get the Content-Type header values.
@@ -219,7 +220,7 @@ public:
      * "application/json", "application/x-www-form-urlencoded", "text/plain", etc.
      */
     virtual std::vector<std::string> get_content_type() const {
-        return request.get_header(cppress::http::HEADER_CONTENT_TYPE);
+        return request_.get_header(cppress::http::consts::HEADER_CONTENT_TYPE);
     }
 
     /**
@@ -232,7 +233,7 @@ public:
      * that may need further parsing.
      */
     virtual std::vector<std::string> get_cookies() const {
-        return request.get_header(cppress::http::HEADER_COOKIE);
+        return request_.get_header(cppress::http::consts::HEADER_COOKIE);
     }
 
     /**
@@ -245,11 +246,11 @@ public:
      * including the scheme and credentials.
      */
     virtual std::vector<std::string> get_authorization() const {
-        return request.get_header(cppress::http::HEADER_AUTHORIZATION);
+        return request_.get_header(cppress::http::consts::HEADER_AUTHORIZATION);
     }
 
     virtual bool keep_alive() const {
-        auto req_connection_values = get_header(cppress::http::HEADER_CONNECTION);
+        auto req_connection_values = get_header(cppress::http::consts::HEADER_CONNECTION);
 
         // transform all the values to upper case
         for (auto& s : req_connection_values) {
@@ -309,4 +310,4 @@ public:
      */
     virtual void remove_param(const std::string& key) { request_params.erase(key); }
 };
-}  // namespace hh_web
+}  // namespace cppress::web

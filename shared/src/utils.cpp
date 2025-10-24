@@ -1,4 +1,9 @@
 #include "includes/utils.hpp"
+#if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
+#include <direct.h>  // For _getcwd on Windows
+#else
+#include <unistd.h>  // For getcwd on POSIX systems
+#endif
 
 #include <algorithm>
 #include <iomanip>
@@ -233,5 +238,23 @@ std::string to_uppercase(const std::string& str) {
     std::transform(upper_case_str.begin(), upper_case_str.end(), upper_case_str.begin(),
                    [](unsigned char c) { return std::toupper(c); });
     return upper_case_str;
+}
+
+std::string get_current_working_directory() {
+    const int PATH_MAX = 4096;
+    char buffer[PATH_MAX];
+#if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
+    if (_getcwd(buffer, sizeof(buffer)) != nullptr) {
+        return std::string(buffer);
+    } else {
+        throw std::runtime_error("Failed to get current working directory");
+    }
+#else
+    if (getcwd(buffer, sizeof(buffer)) != nullptr) {
+        return std::string(buffer);
+    } else {
+        throw std::runtime_error("Failed to get current working directory");
+    }
+#endif
 }
 }  // namespace cppress::shared
