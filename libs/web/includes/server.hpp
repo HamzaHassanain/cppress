@@ -190,6 +190,11 @@ public:
         routers[0]->add_route(std::make_shared<route<T, G>>("DELETE", path, handlers));
     }
 
+    /// @brief Register middleware for the base router.
+    /// @brief Register middleware for the base router.
+    /// @param middleware The middleware function to register
+    void use(const middleware_t<T, G>& middleware) { routers[0]->use(middleware); }
+
 protected:
     /**
      * @brief Serve static files from registered directories.
@@ -199,7 +204,7 @@ protected:
     virtual void serve_static(std::shared_ptr<T> req, std::shared_ptr<G> res) {
         try {
             std::string uri = req->get_uri();
-            std::string sanitized_path = sanitize_path(uri);
+            std::string sanitized_path = shared::sanitize_path(uri);
             std::string file_path;
 
             /// If the file found in the registered static directories
@@ -222,7 +227,8 @@ protected:
             res->set_body(buffer.str());
 
             /// send the file to the browser
-            res->set_content_type(get_mime_type_from_extension(get_file_extension_from_uri(uri)));
+            res->set_content_type(
+                shared::get_mime_type_from_extension(shared::get_file_extension_from_uri(uri)));
             res->set_status(200, "OK");
             res->send();
         } catch (const std::exception& e) {
@@ -263,11 +269,13 @@ protected:
                 }
             }
 
-            if (!handled)  // not handled yet, fallback to 404, user may add custom handlers
+            if (!handled)
                 handle_default_route(req, res);
 
             res->send();
-            res->end();
+            if (!req->keep_alive())
+                res->end();
+
         } catch (const std::exception& e) {
             shared::logger::error("Error in request handler thread: " + std::string(e.what()));
 
@@ -278,7 +286,8 @@ protected:
         }
 
         res->send();
-        res->end();
+        if (!req->keep_alive())
+            res->end();
     };
 
     /**

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(web_framework VERSION 1.0.0)
+project(web VERSION 1.0.0)
 
 
 # Source files
@@ -25,34 +25,34 @@ if(WEB_STANDALONE)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../html ${CMAKE_CURRENT_BINARY_DIR}/html_build)
     
     # Standalone executable for testing
-    add_executable(web_framework app.cpp ${WEB_SOURCES})
+    add_executable(web app.cpp ${WEB_SOURCES})
     
     # Link libraries in dependency order
-    target_link_libraries(web_framework PUBLIC sockets cppress_shared_utils http json html)
+    target_link_libraries(web PUBLIC sockets cppress_shared_utils http json html)
     
     # Apply sanitizer flags if enabled
     if(SANITIZER AND NOT WIN32 AND SANITIZER_FLAGS)
-        target_compile_options(web_framework PRIVATE ${SANITIZER_FLAGS})
-        target_link_options(web_framework PRIVATE ${SANITIZER_LINK_FLAGS})
-        message(STATUS "Applied sanitizer flags to standalone web_framework executable")
+        target_compile_options(web PRIVATE ${SANITIZER_FLAGS})
+        target_link_options(web PRIVATE ${SANITIZER_LINK_FLAGS})
+        message(STATUS "Applied sanitizer flags to standalone web executable")
     endif()
 else()
     # Library mode
-    add_library(web_framework STATIC ${WEB_SOURCES})
-    add_library(cppress::web_framework ALIAS web_framework)
+    add_library(web STATIC ${WEB_SOURCES})
+    add_library(cppress::web ALIAS web)
     
     # Link to common dependencies (in library mode, cppress_common is provided by parent)
-    target_link_libraries(web_framework PUBLIC cppress_common)
+    target_link_libraries(web PUBLIC cppress_common)
     
     # Apply sanitizer flags if enabled
     if(SANITIZER AND NOT WIN32 AND SANITIZER_FLAGS)
-        target_compile_options(web_framework PUBLIC ${SANITIZER_FLAGS})
-        target_link_options(web_framework PUBLIC ${SANITIZER_LINK_FLAGS})
-        message(STATUS "Applied sanitizer flags to web_framework library")
+        target_compile_options(web PUBLIC ${SANITIZER_FLAGS})
+        target_link_options(web PUBLIC ${SANITIZER_LINK_FLAGS})
+        message(STATUS "Applied sanitizer flags to web library")
     endif()
 endif()
 
-target_include_directories(web_framework PUBLIC
+target_include_directories(web PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../>
@@ -63,7 +63,7 @@ target_include_directories(web_framework PUBLIC
 
 # Installation
 if(NOT WEB_STANDALONE)
-    install(TARGETS web_framework
+    install(TARGETS web
         EXPORT cppressTargets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -71,21 +71,21 @@ if(NOT WEB_STANDALONE)
     )
     
     install(DIRECTORY includes/
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cppress/web_framework
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cppress/web
     )
 
 
     install(FILES includes.hpp
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cppress/web_framework
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cppress/web
     )
 
 endif()
 
 
-# if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-#     enable_testing()
-#     add_subdirectory(tests)
-# endif()
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 
 

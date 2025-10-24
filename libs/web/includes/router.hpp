@@ -161,7 +161,7 @@ public:
         {
             shared::logger::error("Web error in router: " + std::string(e.what()));
             shared::logger::error("Status code: " + std::to_string(e.get_status_code()) +
-                          " Message: " + e.get_status_message());
+                                  " Message: " + e.get_status_message());
             throw;
         } catch (const std::exception& e)  // Unhandled exception
         {

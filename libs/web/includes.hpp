@@ -1,7 +1,6 @@
 #pragma once
 
 #include "includes/exceptions.hpp"
-#include "includes/logger.hpp"
 #include "includes/request.hpp"
 #include "includes/response.hpp"
 #include "includes/route.hpp"
