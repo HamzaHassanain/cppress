@@ -377,7 +377,7 @@ public:
      * - Connection errors and closures
      * - Graceful shutdown signals
      *
-     * This method blocks until the server is stopped via stop_server()
+     * This method blocks until the server is stopped via shutdown()
      * or a signal is received.
      *
      * @note Overrides tcp_server::listen
@@ -414,6 +414,6 @@ public:
      * @note Overrides tcp_server::stop_server
      * @note The server will stop after the current epoll_wait timeout expires
      */
-    virtual void stop_server() override;
+    virtual void shutdown() override;
 };
 }  // namespace cppress::sockets

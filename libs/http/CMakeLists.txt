@@ -79,7 +79,7 @@ if(NOT HTTP_STANDALONE)
 endif()
 
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests AND NOT HTTP_STANDALONE)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests)
     enable_testing()
     add_subdirectory(tests)
 endif()

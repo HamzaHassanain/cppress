@@ -164,7 +164,7 @@ public:
      * @brief Stop the server and shutdown worker threads.
      */
     virtual void stop() {
-        cppress::http::http_server::stop_server();
+        cppress::http::http_server::shutdown();
         worker_pool.stop_workers();
     }
 

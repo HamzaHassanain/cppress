@@ -60,9 +60,9 @@ void epoll_server::try_accept() {
 
 #if defined(__linux__) || defined(__linux)
             // Use accept4 for efficiency (sets NONBLOCK + CLOEXEC atomically)
-            auto cfd =
-                ::accept4(listener_socket->native_handle(), reinterpret_cast<sockaddr*>(&client_addr),
-                          &client_addr_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
+            auto cfd = ::accept4(listener_socket->native_handle(),
+                                 reinterpret_cast<sockaddr*>(&client_addr), &client_addr_len,
+                                 SOCK_NONBLOCK | SOCK_CLOEXEC);
             if (cfd < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
                     break;  // No more connections to accept
@@ -72,8 +72,8 @@ void epoll_server::try_accept() {
             // Fallback windows implementation
 
             // Fallback Unix implementation
-            int cfd = ::accept(listener_socket->native_handle(), reinterpret_cast<sockaddr*>(&client_addr),
-                               &client_addr_len);
+            int cfd = ::accept(listener_socket->native_handle(),
+                               reinterpret_cast<sockaddr*>(&client_addr), &client_addr_len);
             if (cfd < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
                     break;  // No more connections to accept
@@ -477,7 +477,8 @@ void epoll_server::on_connection_closed(std::shared_ptr<connection> conn) {
  * - Connection lifetime managed by shared_ptr reference counting
  */
 void epoll_server::on_message_received(std::shared_ptr<connection> conn, const data_buffer& db) {
-    std::cout << "Message Received from " << conn->native_handle() << ": " << db.to_string() << std::endl;
+    std::cout << "Message Received from " << conn->native_handle() << ": " << db.to_string()
+              << std::endl;
     std::string message = "Echo " + db.to_string();
 
     if (db.to_string() == "close\n")
@@ -577,7 +578,7 @@ bool epoll_server::register_listener_socket(std::shared_ptr<socket> sock_ptr) {
  * ensuring graceful closure of all connections.
 
  */
-void epoll_server::stop_server() {
+void epoll_server::shutdown() {
     g_stop = 1;
 }
 

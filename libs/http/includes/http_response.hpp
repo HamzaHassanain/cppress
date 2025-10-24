@@ -42,7 +42,7 @@
  * res.send();
  * res.end();
  * @endcode
- *
+ * @note All Headers are sent in UPPERCASE format
  * @note Always call send() before end() to transmit the response
  * @note After calling end(), the response object should not be used further
  *

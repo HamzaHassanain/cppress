@@ -42,7 +42,7 @@ namespace cppress::sockets {
  *
  * Lifecycle and threading notes:
  * - listen() is expected to block and run the server loop until
- *   stop_server() is called or the server otherwise exits.
+ *   shutdown() is called or the server otherwise exits.
  * - Callbacks such as on_message_received may be called from the I/O
  *   thread; derived classes or users should document their threading
  *   guarantees if they change this behavior.
@@ -175,7 +175,7 @@ public:
      * that on_shutdown_success() is called once teardown is complete. The
      * method should be safe to call from other threads.
      */
-    virtual void stop_server() = 0;
+    virtual void shutdown() = 0;
 };
 
 }  // namespace cppress::sockets
