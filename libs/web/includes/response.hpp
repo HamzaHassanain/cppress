@@ -1,3 +1,47 @@
+/**
+ * @file response.hpp
+ * @brief High-level HTTP response wrapper for web applications
+ *
+ * This file defines the response class, which provides a simplified interface
+ * for creating and sending HTTP responses in the cppress web framework.
+ *
+ * @section response_features Key Features
+ * @li Convenient methods for sending JSON, HTML, and text responses
+ * @li Automatic content-type and content-length header management
+ * @li Cookie support with attribute configuration
+ * @li Thread-safe header and status manipulation
+ * @li Prevention of double-sending responses
+ * @li Keep-alive connection support
+ * @li Default 200 OK status for successful responses
+ *
+ * @section response_usage Usage Example
+ * @code{.cpp}
+ * void handler(std::shared_ptr<request> req, std::shared_ptr<response> res) {
+ *     // Send JSON response
+ *     res->send_json("{\"message\": \"Hello World\"}");
+ *
+ *     // Or send HTML
+ *     res->send_html("<h1>Hello World</h1>");
+ *
+ *     // Or send plain text
+ *     res->send_text("Hello World");
+ *
+ *     // Custom status and headers
+ *     res->set_status(201, "Created");
+ *     res->add_header("X-Custom", "value");
+ *     res->set_body("Resource created");
+ *     res->send();
+ * }
+ * @endcode
+ *
+ * @note Never instantiate response objects directly - they are created by the server
+ * @note Response objects are move-only (no copying) for resource safety
+ * @note send() methods can only be called once per response
+ *
+ * @author cppress team
+ * @version 1.0
+ */
+
 #pragma once
 
 #include <atomic>

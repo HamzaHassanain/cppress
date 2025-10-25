@@ -1,3 +1,48 @@
+/**
+ * @file utilities.hpp
+ * @brief Utility functions for web request processing
+ *
+ * This file provides utility functions for common web operations such as
+ * URL parsing, path matching, parameter extraction, and security validation.
+ *
+ * @section utility_functions Key Functions
+ *
+ * @subsection url_parsing URL Parsing
+ * @li get_path() - Extract path from URI (without query string)
+ * @li get_query_parameters() - Parse query string into key-value pairs
+ * @li get_path_params() - Extract parameter names from route expressions
+ *
+ * @subsection route_matching Route Matching
+ * @li match_path() - Match route patterns against request paths
+ *     Supports named parameters (e.g., /users/:id)
+ * @li is_uri_static() - Check if URI points to static resource
+ *
+ * @subsection security Security
+ * @li body_has_malicious_content() - Detect XSS, SQL injection, command injection
+ *
+ * @section utilities_usage Usage Example
+ * @code{.cpp}
+ * // Parse query parameters
+ * auto params = get_query_parameters("/search?q=test&page=1");
+ * // params: {{"q", "test"}, {"page", "1"}}
+ *
+ * // Match route pattern
+ * auto [matched, params] = match_path("/users/:id", "/users/123");
+ * // matched: true, params: {{"id", "123"}}
+ *
+ * // Check for malicious content
+ * if (body_has_malicious_content(request_body)) {
+ *     // Handle security threat
+ * }
+ * @endcode
+ *
+ * @note These utilities are used internally by request, route, and router classes
+ * @note All functions are thread-safe and stateless
+ *
+ * @author cppress team
+ * @version 1.0
+ */
+
 #pragma once
 
 #include <map>

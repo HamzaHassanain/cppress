@@ -1,3 +1,63 @@
+/**
+ * @file router.hpp
+ * @brief Route management and request routing for web applications
+ *
+ * This file defines the router class, which manages collections of routes and
+ * middleware for processing HTTP requests in the cppress web framework.
+ *
+ * @section router_features Key Features
+ * @li Route registration and management
+ * @li Middleware chain execution
+ * @li Request matching and handler invocation
+ * @li Comprehensive error handling
+ * @li Support for GET, POST, PUT, DELETE shortcuts
+ * @li Ordered route matching (first match wins)
+ *
+ * @section router_usage Usage Example
+ * @code{.cpp}
+ * auto router = std::make_shared<cppress::web::router<>>();
+ *
+ * // Add middleware (runs before routes)
+ * router->use([](auto req, auto res) {
+ *     std::cout << req->get_method() << " " << req->get_path() << std::endl;
+ *     return exit_code::CONTINUE;
+ * });
+ *
+ * // Add routes
+ * router->get("/api/users", {
+ *     [](auto req, auto res) {
+ *         res->send_json("{\"users\": []}");
+ *         return exit_code::EXIT;
+ *     }
+ * });
+ *
+ * router->post("/api/users", {
+ *     [](auto req, auto res) {
+ *         std::string body = req->get_body();
+ *         // Process and save user...
+ *         res->set_status(201, "Created");
+ *         res->send_json("{\"id\": \"123\"}");
+ *         return exit_code::EXIT;
+ *     }
+ * });
+ *
+ * // Use router in server
+ * server->use_router(router);
+ * @endcode
+ *
+ * @section router_flow Processing Flow
+ * -# Execute all middleware in registration order
+ * -# Match request against registered routes
+ * -# Execute matching route handlers
+ * -# Handle exceptions and convert to HTTP responses
+ *
+ * @note Middleware executes before route handlers
+ * @note First matching route wins (order matters)
+ *
+ * @author cppress team
+ * @version 1.0
+ */
+
 #pragma once
 
 #include <iostream>

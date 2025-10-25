@@ -1,3 +1,44 @@
+/**
+ * @file exceptions.hpp
+ * @brief Web framework exception handling with HTTP status code support
+ *
+ * This file defines the web exception class for the cppress web framework.
+ * It extends the base socket exception to provide HTTP-aware error handling
+ * with proper status codes and messages for client responses.
+ *
+ * @section exception_features Key Features
+ * @li HTTP status code integration (400, 404, 500, etc.)
+ * @li Custom status messages for better error descriptions
+ * @li Multiple constructors for different use cases
+ * @li Thread-safe error information retrieval
+ * @li Formatted error messages including HTTP status details
+ *
+ * @section exception_usage Usage Example
+ * @code{.cpp}
+ * // Throw a 404 Not Found exception
+ * throw cppress::web::exception("Resource not found", 404, "Not Found");
+ *
+ * // Catch and handle web exceptions
+ * try {
+ *     // ... web operation
+ * } catch (const cppress::web::exception& e) {
+ *     response->set_status(e.get_status_code(), e.get_status_message());
+ *     response->send_text(e.what());
+ * }
+ * @endcode
+ *
+ * @section common_status_codes Common HTTP Status Codes
+ * @li 400: Bad Request - Client sent invalid data
+ * @li 401: Unauthorized - Authentication required
+ * @li 403: Forbidden - Access denied
+ * @li 404: Not Found - Resource doesn't exist
+ * @li 500: Internal Server Error - Server-side error
+ * @li 503: Service Unavailable - Server overloaded/down
+ *
+ * @author cppress team
+ * @version 1.0
+ */
+
 #pragma once
 #include "sockets/includes.hpp"
 

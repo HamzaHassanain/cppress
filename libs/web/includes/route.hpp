@@ -1,3 +1,50 @@
+/**
+ * @file route.hpp
+ * @brief Route definition and matching for web request handling
+ *
+ * This file defines the route class, which represents a single route in the
+ * cppress web framework with its associated HTTP method, path pattern, and handlers.
+ *
+ * @section route_features Key Features
+ * @li HTTP method-based routing (GET, POST, PUT, DELETE, etc.)
+ * @li Path pattern matching with parameter extraction
+ * @li Support for parameterized routes (e.g., /users/:id)
+ * @li Multiple handler support for middleware chains
+ * @li Automatic path parameter population in request objects
+ * @li Handler execution with exit code control flow
+ *
+ * @section route_usage Usage Example
+ * @code{.cpp}
+ * // Create a route for GET /users/:id
+ * auto userRoute = std::make_shared<route<>>(
+ *     "GET",
+ *     "/users/:id",
+ *     {
+ *         [](auto req, auto res) {
+ *             auto params = req->get_path_params();
+ *             std::string id = params["id"];
+ *             res->send_json("{\"id\": \"" + id + "\"}");
+ *             return exit_code::EXIT;
+ *         }
+ *     }
+ * );
+ *
+ * // Add to router
+ * router->add_route(userRoute);
+ * @endcode
+ *
+ * @section route_return_values Handler Return Values
+ * @li exit_code::EXIT: Stop processing, finalize response
+ * @li exit_code::CONTINUE: Continue to next handler
+ * @li exit_code::_ERROR: Indicate error condition
+ *
+ * @note Routes are typically created and managed by router objects
+ * @note Path parameters are automatically extracted and set in request
+ *
+ * @author cppress team
+ * @version 1.0
+ */
+
 #pragma once
 #include <iostream>
 #include <string>

@@ -70,7 +70,7 @@ void http_server::on_message_received(std::shared_ptr<cppress::sockets::connecti
     }
 
     // Shall be removed to support persistent connections
-    this->stop_reading_from_connection(conn);
+    // this->stop_reading_from_connection(conn);
 
     // Create HTTP request object with parsed data
     http_request request(method, uri, http_version, headers, body, close_connection_for_objects);

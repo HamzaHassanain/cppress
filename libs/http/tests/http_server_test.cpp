@@ -557,3 +557,45 @@ TEST(HttpServerTest, ConcurrentConnectionsWithDifferentResponseTypesAndTimings) 
     server.shutdown();
     server_thread.join();
 }
+
+TEST(HttpServerTest, ConnectionReuseForSameRequest) {
+    cppress::http::http_server server(9983);
+
+    std::atomic<int> request_count{0};
+
+    server.set_request_callback(
+        [&](cppress::http::http_request& req, cppress::http::http_response& res) {
+            request_count++;
+            res.set_status(200, "OK");
+            res.add_header("Content-Type", "text/plain");
+            res.add_header("X-Request-Count", std::to_string(request_count.load()));
+            res.set_body("Request number: " + std::to_string(request_count.load()));
+            res.send();
+        });
+
+    std::thread server_thread([&server]() { server.listen(); });
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    try {
+        cppress::sockets::connection conn;
+        conn.connect(cppress::sockets::socket_address(port(9983), ip_address("127.0.0.1")));
+        conn.write(data_buffer("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+        const std::string response1 = std::string(conn.read().to_string());
+        conn.write(data_buffer("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+        const std::string response2 = std::string(conn.read().to_string());
+        conn.write(data_buffer("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+        const std::string response3 = std::string(conn.read().to_string());
+        conn.write(data_buffer("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+        const std::string response4 = std::string(conn.read().to_string());
+        conn.write(data_buffer("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+        const std::string response5 = std::string(conn.read().to_string());
+
+        EXPECT_NE(response5.find("200 OK"), std::string::npos);
+        // EXPECT_EQ(response.find("X-REQUEST-COUNT"), 0);
+    } catch (const std::exception& e) {
+        std::cerr << "Request error: " << e.what() << std::endl;
+    }
+
+    server.shutdown();
+    server_thread.join();
+}

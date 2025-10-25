@@ -1,3 +1,45 @@
+/**
+ * @file request.hpp
+ * @brief High-level HTTP request wrapper for web applications
+ *
+ * This file defines the request class, which provides a simplified and enhanced
+ * interface for working with HTTP requests in the cppress web framework.
+ *
+ * @section request_features Key Features
+ * @li Path parameter extraction from URLs (e.g., /users/:id)
+ * @li Query parameter parsing and retrieval
+ * @li Convenient header access methods
+ * @li Cookie and authorization header helpers
+ * @li Thread-safe parameter management
+ * @li Keep-alive connection detection
+ * @li Custom request parameter storage
+ *
+ * @section request_usage Usage Example
+ * @code{.cpp}
+ * void handler(std::shared_ptr<request> req, std::shared_ptr<response> res) {
+ *     // Get path parameters
+ *     auto params = req->get_path_params();
+ *     std::string userId = params["id"];
+ *
+ *     // Get query parameters
+ *     std::string page = req->get_query_parameter("page");
+ *
+ *     // Access headers
+ *     auto auth = req->get_authorization();
+ *
+ *     // Get request body
+ *     std::string body = req->get_body();
+ * }
+ * @endcode
+ *
+ * @note Never instantiate request objects directly - they are created by the server
+ * @note Request objects are move-only (no copying) for resource safety
+ * @note All getter methods are thread-safe and const-correct
+ *
+ * @author cppress team
+ * @version 1.0
+ */
+
 #pragma once
 
 #include <algorithm>
