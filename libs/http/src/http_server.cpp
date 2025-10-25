@@ -68,6 +68,8 @@ void http_server::on_message_received(std::shared_ptr<cppress::sockets::connecti
         this->on_request_received(request, response);
         return;
     }
+
+    // Shall be removed to support persistent connections
     this->stop_reading_from_connection(conn);
 
     // Create HTTP request object with parsed data

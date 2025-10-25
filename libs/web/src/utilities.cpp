@@ -36,14 +36,14 @@ bool is_uri_static(const std::string& uri) {
  * - Sanitizes the input
  * - Scans for ':' characters and captures the segment until the next '/'
  */
-std::vector<std::pair<std::string, std::string>> get_path_params(const std::string& uri) {
-    std::vector<std::pair<std::string, std::string>> path_params;
+std::map<std::string, std::string> get_path_params(const std::string& uri) {
+    std::map<std::string, std::string> path_params;
     std::string path = shared::sanitize_path(uri);
     size_t start = 0;
     while ((start = path.find(':', start)) != std::string::npos) {
         size_t end = path.find('/', start);
         std::string param = path.substr(start + 1, end - start - 1);
-        path_params.emplace_back(param, "");
+        path_params.emplace(param, "");
         start = (end == std::string::npos) ? std::string::npos : end + 1;
     }
 
@@ -68,8 +68,8 @@ std::string get_path(const std::string& uri) {
  * - Splits on '&' then '=' to extract name/value
  * - Trims whitespace from name/value but does not URL-decode
  */
-std::vector<std::pair<std::string, std::string>> get_query_parameters(const std::string& uri) {
-    std::vector<std::pair<std::string, std::string>> result;
+std::map<std::string, std::string> get_query_parameters(const std::string& uri) {
+    std::map<std::string, std::string> result;
     size_t pos = uri.find('?');
     if (pos == std::string::npos)
         return result;
@@ -84,7 +84,7 @@ std::vector<std::pair<std::string, std::string>> get_query_parameters(const std:
         if (equal_pos != std::string::npos) {
             std::string name = cppress::shared::trim(pair.substr(0, equal_pos));
             std::string value = cppress::shared::trim(pair.substr(equal_pos + 1));
-            result.emplace_back(name, value);
+            result.emplace(name, value);
         }
     }
     return result;
@@ -95,8 +95,8 @@ std::vector<std::pair<std::string, std::string>> get_query_parameters(const std:
  *
  * - Support exact matches, named parameters (":param") and wildcard ("*")
  */
-std::pair<bool, std::vector<std::pair<std::string, std::string>>> match_path(
-    const std::string& expression, const std::string& path) {
+std::pair<bool, std::map<std::string, std::string>> match_path(const std::string& expression,
+                                                               const std::string& path) {
     // Fast path: exact string match (covers cases including root "/")
     if (path == expression) {
         return {true, {}};
@@ -148,7 +148,7 @@ std::pair<bool, std::vector<std::pair<std::string, std::string>>> match_path(
     std::vector<std::string> expr_segs = split_segments(expr);
     std::vector<std::string> path_segs = split_segments(p);
 
-    std::vector<std::pair<std::string, std::string>> path_params;
+    std::map<std::string, std::string> path_params;
 
     size_t ei = 0, pi = 0;
     while (ei < expr_segs.size() && pi < path_segs.size()) {
@@ -164,14 +164,14 @@ std::pair<bool, std::vector<std::pair<std::string, std::string>>> match_path(
                 remainder += path_segs[k];
             }
             if (!remainder.empty())
-                path_params.emplace_back(std::string("*"), shared::url_decode(remainder));
+                path_params.emplace(std::string("*"), shared::url_decode(remainder));
             return {true, path_params};
         }
 
         if (!es.empty() && es[0] == ':') {
             // named parameter - capture this segment value
             std::string name = es.substr(1);
-            path_params.emplace_back(name, shared::url_decode(ps));
+            path_params.emplace(name, shared::url_decode(ps));
             ++ei;
             ++pi;
             continue;

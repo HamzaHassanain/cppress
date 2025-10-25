@@ -35,13 +35,13 @@ namespace cppress::web {
 template <typename T = request, typename G = response, typename R = router<T, G>>
 class server : public cppress::http::http_server {
 protected:
-    /// Thread pool for handling requests concurrently
-    shared::thread_pool worker_pool;
-
     /// Server port number
     int port;
     /// Server host/IP address
     std::string host;
+
+    /// Thread pool for handling requests concurrently
+    shared::thread_pool worker_pool;
 
     /// Directories to serve static files from
     std::vector<std::string> static_directories;
@@ -77,12 +77,14 @@ public:
      * @brief Construct a web server with specified port and host.
      * @param port Port number to listen on
      * @param host Host address (default: "0.0.0.0" for all interfaces)
+     * @param worker_threads Number of worker threads in the pool (default: hardware concurrency)
      */
-    explicit server(int port, const std::string& host = "0.0.0.0")
-        : worker_pool(std::thread::hardware_concurrency()),
+    explicit server(int port, const std::string& host = "0.0.0.0",
+                    std::size_t worker_threads = std::thread::hardware_concurrency())
+        : cppress::http::http_server(port, host),
           port(port),
           host(host),
-          cppress::http::http_server(port, host) {
+          worker_pool(worker_threads) {
         static_assert(std::is_base_of<request, T>::value, "T must derive from request");
         static_assert(std::is_base_of<response, G>::value, "G must derive from response");
         static_assert(std::is_base_of<router<T, G>, R>::value, "R must derive from router<T, G>");
@@ -193,7 +195,7 @@ public:
     /// @brief Register middleware for the base router.
     /// @brief Register middleware for the base router.
     /// @param middleware The middleware function to register
-    void use(const middleware_t<T, G>& middleware) { routers[0]->use(middleware); }
+    void use(const request_handler_t<T, G>& middleware) { routers[0]->use(middleware); }
 
 protected:
     /**

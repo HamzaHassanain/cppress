@@ -1,7 +1,7 @@
 #pragma once
 
+#include <map>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -16,7 +16,7 @@ namespace cppress::web {
  * all query parameters as name-value pairs. It handles URL decoding
  * and proper parameter separation.
  */
-std::vector<std::pair<std::string, std::string>> get_query_parameters(const std::string& uri);
+std::map<std::string, std::string> get_query_parameters(const std::string& uri);
 
 /**
  * @brief Check whether a URI points to a static resource by extension.
@@ -35,7 +35,7 @@ bool is_uri_static(const std::string& uri);
  * path requires matching against the route expression and is typically done
  * by the router during request handling.
  */
-std::vector<std::pair<std::string, std::string>> get_path_params(const std::string& uri);
+std::map<std::string, std::string> get_path_params(const std::string& uri);
 
 /**
  * @brief Extract the path component (without query) from a URI.
@@ -54,8 +54,8 @@ std::string get_path(const std::string& uri);
  * - Exact segment match
  * - Named parameters using leading ':' (matches a single segment)
  */
-std::pair<bool, std::vector<std::pair<std::string, std::string>>> match_path(
-    const std::string& expression, const std::string& rhs);
+std::pair<bool, std::map<std::string, std::string>> match_path(const std::string& expression,
+                                                               const std::string& rhs);
 
 /**
  * @brief Check if the request body contains malicious content.

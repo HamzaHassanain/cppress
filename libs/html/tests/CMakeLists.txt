@@ -52,16 +52,12 @@ if(TEST_FILES)
     target_link_libraries(html-tests
         PRIVATE
             cppress_common
+            html
             GTest::gtest_main
             GTest::gtest
     )
 
- 
-    
-    if(TARGET html)
-        target_link_libraries(html-tests PRIVATE html)
-    endif()
-    
+
 
     # Tell CMake to find and register the tests to be run with CTest
     include(GoogleTest)

@@ -37,14 +37,11 @@ if(TEST_FILES)
     target_link_libraries(json-tests
         PRIVATE
             cppress_common
+            json
             GTest::gtest_main
             GTest::gtest
     )
 
-    # Add libraries that exist
-    if(TARGET json)
-        target_link_libraries(json-tests PRIVATE json)
-    endif()
 
     # Tell CMake to find and register the tests to be run with CTest
     include(GoogleTest)

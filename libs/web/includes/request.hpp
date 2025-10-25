@@ -45,8 +45,8 @@ protected:
     /// Path parameters extracted from the request URI, in the form of key-value pairs
     /// http://localhost/users/:id/posts/:postID
     /// http://localhost/users/123/posts/456
-    /// vector holds => {"id", "123"}, {"postID", "456"}
-    std::vector<std::pair<std::string, std::string>> path_params;
+    /// map holds => {"id", "123"}, {"postID", "456"}
+    std::map<std::string, std::string> path_params;
 
     /// Modify path_params mutex
     mutable std::mutex path_params_mutex;
@@ -89,9 +89,7 @@ public:
      * Example: For URI "/users/123/posts/456", this might return:
      * [{"userId", "123"}, {"postId", "456"}]
      */
-    virtual std::vector<std::pair<std::string, std::string>> get_path_params() const {
-        return path_params;
-    }
+    virtual std::map<std::string, std::string> get_path_params() const { return path_params; }
 
     /**
      * @brief Set the path params object
@@ -99,7 +97,7 @@ public:
      * the path parameters
      * @param params The new path parameters to set
      */
-    virtual void set_path_params(const std::vector<std::pair<std::string, std::string>>& params) {
+    virtual void set_path_params(const std::map<std::string, std::string>& params) {
         std::lock_guard<std::mutex> lock(path_params_mutex);
         path_params = params;
     }
@@ -146,7 +144,7 @@ public:
      * Example: For URI "/search?q=example&category=news&page=2", returns:
      * [{"q", "example"}, {"category", "news"}, {"page", "2"}]
      */
-    virtual std::vector<std::pair<std::string, std::string>> get_query_parameters() const {
+    virtual std::map<std::string, std::string> get_query_parameters() const {
         return cppress::web::get_query_parameters(request_.get_uri());
     }
 

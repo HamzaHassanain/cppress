@@ -36,7 +36,9 @@ if(TEST_FILES)
     # Link against all cppress libraries and GTest
     target_link_libraries(web-tests
         PRIVATE
+            web
             cppress_common
+            cppress_shared_utils
             sockets
             json
             html

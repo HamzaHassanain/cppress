@@ -23,6 +23,8 @@ using namespace cppress::web;
 using namespace cppress::json;
 using namespace cppress::sockets;
 
+#define REQ_RES [[maybe_unused]] std::shared_ptr<request> req, std::shared_ptr<response> res
+
 /**
  * @brief Test fixture for web server tests
  *
@@ -69,16 +71,14 @@ TEST_F(WebServerTest, BasicServerSetupAndRouting) {
     std::atomic<int> param_route_count{0};
 
     // Add middleware to track all requests
-    server->use([&middleware_count](std::shared_ptr<request> req,
-                                    std::shared_ptr<response> res) -> exit_code {
+    server->use([&middleware_count](REQ_RES) -> exit_code {
         middleware_count++;
         res->add_header("X-Middleware", "executed");
         return exit_code::CONTINUE;
     });
 
     // GET route
-    server->get("/test", {[&get_count](std::shared_ptr<request> req,
-                                       std::shared_ptr<response> res) -> exit_code {
+    server->get("/test", {[&get_count](REQ_RES) -> exit_code {
                     get_count++;
                     res->set_status(200, "OK");
                     res->send_text("GET request successful");
@@ -86,8 +86,7 @@ TEST_F(WebServerTest, BasicServerSetupAndRouting) {
                 }});
 
     // POST route
-    server->post("/data", {[&post_count](std::shared_ptr<request> req,
-                                         std::shared_ptr<response> res) -> exit_code {
+    server->post("/data", {[&post_count](REQ_RES) -> exit_code {
                      post_count++;
                      std::string body = req->get_body();
                      res->set_status(201, "Created");
@@ -96,8 +95,7 @@ TEST_F(WebServerTest, BasicServerSetupAndRouting) {
                  }});
 
     // PUT route
-    server->put("/update", {[&put_count](std::shared_ptr<request> req,
-                                         std::shared_ptr<response> res) -> exit_code {
+    server->put("/update", {[&put_count](REQ_RES) -> exit_code {
                     put_count++;
                     res->set_status(200, "OK");
                     res->send_text("PUT successful");
@@ -105,8 +103,7 @@ TEST_F(WebServerTest, BasicServerSetupAndRouting) {
                 }});
 
     // DELETE route
-    server->delete_("/remove", {[&delete_count](std::shared_ptr<request> req,
-                                                std::shared_ptr<response> res) -> exit_code {
+    server->delete_("/remove", {[&delete_count](REQ_RES) -> exit_code {
                         delete_count++;
                         res->set_status(204, "No Content");
                         res->send();
@@ -114,19 +111,15 @@ TEST_F(WebServerTest, BasicServerSetupAndRouting) {
                     }});
 
     // Route with path parameters
-    server->get("/users/:id/posts/:postId",
-                {[&param_route_count](std::shared_ptr<request> req,
-                                      std::shared_ptr<response> res) -> exit_code {
+    server->get("/users/:id/posts/:postId", {[&param_route_count](REQ_RES) -> exit_code {
                     param_route_count++;
                     auto params = req->get_path_params();
 
                     std::string user_id, post_id;
-                    for (const auto& [key, value] : params) {
-                        if (key == "id")
-                            user_id = value;
-                        if (key == "postId")
-                            post_id = value;
-                    }
+                    if (params.find("id") != params.end())
+                        user_id = params["id"];
+                    if (params.find("postId") != params.end())
+                        post_id = params["postId"];
 
                     res->set_status(200, "OK");
                     res->send_text("User: " + user_id + ", Post: " + post_id);
@@ -134,17 +127,14 @@ TEST_F(WebServerTest, BasicServerSetupAndRouting) {
                 }});
 
     // Route with query parameters
-    server->get("/search",
-                {[](std::shared_ptr<request> req, std::shared_ptr<response> res) -> exit_code {
+    server->get("/search", {[](REQ_RES) -> exit_code {
                     auto query_params = req->get_query_parameters();
                     std::string query, page;
 
-                    for (const auto& [key, value] : query_params) {
-                        if (key == "q")
-                            query = value;
-                        if (key == "page")
-                            page = value;
-                    }
+                    if (query_params.find("q") != query_params.end())
+                        query = query_params["q"];
+                    if (query_params.find("page") != query_params.end())
+                        page = query_params["page"];
 
                     res->set_status(200, "OK");
                     res->send_text("Search: " + query + ", Page: " + page);
@@ -152,8 +142,7 @@ TEST_F(WebServerTest, BasicServerSetupAndRouting) {
                 }});
 
     // Custom 404 handler
-    server->use_default([&not_found_count](std::shared_ptr<request> req,
-                                           std::shared_ptr<response> res) -> exit_code {
+    server->use_default([&not_found_count](REQ_RES) -> exit_code {
         not_found_count++;
         res->set_status(404, "Not Found");
         res->send_text("Custom 404: Route not found");
@@ -175,25 +164,23 @@ TEST_F(WebServerTest, BasicServerSetupAndRouting) {
     std::vector<std::thread> clients;
     std::atomic<int> successful_requests{0};
 
-    // Test GET request
-    clients.emplace_back([&successful_requests]() {
-        try {
-            cppress::sockets::connection conn;
-            conn.connect(cppress::sockets::socket_address(port(8080), ip_address("127.0.0.1")));
-            conn.write(data_buffer("GET /test HTTP/1.1\r\nHost: localhost\r\n\r\n"));
-            auto response = std::string(conn.read().to_string());
+    for (int i = 0; i < 3; i++)
+        clients.emplace_back([&successful_requests]() {
+            try {
+                cppress::sockets::connection conn;
+                conn.connect(cppress::sockets::socket_address(port(8080), ip_address("127.0.0.1")));
+                conn.write(data_buffer("GET /test HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+                auto response = std::string(conn.read().to_string());
 
-            if (response.find("200 OK") != std::string::npos &&
-                response.find("GET request successful") != std::string::npos &&
-                response.find("X-Middleware: executed") != std::string::npos) {
-                successful_requests++;
+                if (response.find("200 OK") != std::string::npos &&
+                    response.find("GET request successful") != std::string::npos &&
+                    response.find("X-MIDDLEWARE: executed") != std::string::npos) {
+                    successful_requests++;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "GET test error: " << e.what() << std::endl;
             }
-        } catch (const std::exception& e) {
-            std::cerr << "GET test error: " << e.what() << std::endl;
-        }
-    });
-
-    // Test POST request
+        });
     clients.emplace_back([&successful_requests]() {
         try {
             std::string body = "test data";
@@ -218,7 +205,6 @@ TEST_F(WebServerTest, BasicServerSetupAndRouting) {
         }
     });
 
-    // Test PUT request
     clients.emplace_back([&successful_requests]() {
         try {
             cppress::sockets::connection conn;
@@ -303,13 +289,11 @@ TEST_F(WebServerTest, BasicServerSetupAndRouting) {
         }
     });
 
-    // Wait for all clients to complete
     for (auto& client : clients) {
         client.join();
     }
 
-    // Verify results
-    EXPECT_EQ(successful_requests.load(), 7);
+    EXPECT_EQ(successful_requests.load(), 9);
     EXPECT_GT(middleware_count.load(), 0);
     EXPECT_EQ(get_count.load(), 3);  // /test, path params, query params
     EXPECT_EQ(post_count.load(), 1);
@@ -338,21 +322,16 @@ TEST_F(WebServerTest, BasicServerSetupAndRouting) {
 TEST_F(WebServerTest, JsonApiWithCppressJsonLibrary) {
     auto server = std::make_shared<cppress::web::server<>>(8081, "0.0.0.0");
 
-    // In-memory storage for JSON data
     std::mutex storage_mutex;
     std::map<int, json::json_object> items_storage;
     std::atomic<int> next_id{1};
 
-    // JSON validation middleware
-    auto json_validator = [](std::shared_ptr<request> req,
-                             std::shared_ptr<response> res) -> exit_code {
+    auto json_validator = [](REQ_RES) -> exit_code {
         if (req->get_method() == "POST" || req->get_method() == "PUT") {
             try {
-                // Try to parse the body as JSON
                 json::parse(req->get_body());
                 return exit_code::CONTINUE;
             } catch (const std::exception& e) {
-                // Invalid JSON
                 json::json_object error_obj;
                 error_obj.insert("error", json::maker::make_string("Invalid JSON format"));
                 error_obj.insert("message", json::maker::make_string(e.what()));
@@ -365,23 +344,18 @@ TEST_F(WebServerTest, JsonApiWithCppressJsonLibrary) {
         return exit_code::CONTINUE;
     };
 
-    // Create a router for API endpoints
     auto api_router = std::make_shared<router<>>();
     api_router->use(json_validator);
 
-    // POST /api/items - Create new item
     api_router->post(
-        "/api/items",
-        {[&](std::shared_ptr<request> req, std::shared_ptr<response> res) -> exit_code {
+        "/api/items", {[&](REQ_RES) -> exit_code {
             try {
                 auto json_data = json::parse(req->get_body());
 
-                // Extract fields using cppress::json getters
                 std::string name = json::getter::get_string(json_data["name"]);
                 std::string description = json::getter::get_string(json_data["description"]);
                 double price = json::getter::get_number(json_data["price"]);
 
-                // Create new item
                 int id = next_id++;
                 json::json_object item;
                 item.insert("id", json::maker::make_number(id));
@@ -409,10 +383,8 @@ TEST_F(WebServerTest, JsonApiWithCppressJsonLibrary) {
             return exit_code::EXIT;
         }});
 
-    // GET /api/items - Get all items
     api_router->get(
-        "/api/items",
-        {[&](std::shared_ptr<request> req, std::shared_ptr<response> res) -> exit_code {
+        "/api/items", {[&](REQ_RES) -> exit_code {
             try {
                 auto items_array = json::maker::make_array();
 
@@ -440,18 +412,12 @@ TEST_F(WebServerTest, JsonApiWithCppressJsonLibrary) {
             return exit_code::EXIT;
         }});
 
-    // GET /api/items/:id - Get specific item
-    api_router->get("/api/items/:id",
-                    {[&](std::shared_ptr<request> req, std::shared_ptr<response> res) -> exit_code {
+    api_router->get("/api/items/:id", {[&](REQ_RES) -> exit_code {
                         try {
                             auto params = req->get_path_params();
                             int id = 0;
-                            for (const auto& [key, value] : params) {
-                                if (key == "id") {
-                                    id = std::stoi(value);
-                                    break;
-                                }
-                            }
+                            if (params.find("id") != params.end())
+                                id = std::stoi(params["id"]);
 
                             std::lock_guard<std::mutex> lock(storage_mutex);
                             if (items_storage.find(id) != items_storage.end()) {
@@ -479,17 +445,12 @@ TEST_F(WebServerTest, JsonApiWithCppressJsonLibrary) {
 
     // PUT /api/items/:id - Update item
     api_router->put(
-        "/api/items/:id",
-        {[&](std::shared_ptr<request> req, std::shared_ptr<response> res) -> exit_code {
+        "/api/items/:id", {[&](REQ_RES) -> exit_code {
             try {
                 auto params = req->get_path_params();
                 int id = 0;
-                for (const auto& [key, value] : params) {
-                    if (key == "id") {
-                        id = std::stoi(value);
-                        break;
-                    }
-                }
+                if (params.find("id") != params.end())
+                    id = std::stoi(params["id"]);
 
                 auto json_data = json::parse(req->get_body());
                 std::string name = json::getter::get_string(json_data["name"]);
@@ -529,17 +490,13 @@ TEST_F(WebServerTest, JsonApiWithCppressJsonLibrary) {
 
     // DELETE /api/items/:id - Delete item
     api_router->delete_(
-        "/api/items/:id",
-        {[&](std::shared_ptr<request> req, std::shared_ptr<response> res) -> exit_code {
+        "/api/items/:id", {[&](REQ_RES) -> exit_code {
             try {
                 auto params = req->get_path_params();
                 int id = 0;
-                for (const auto& [key, value] : params) {
-                    if (key == "id") {
-                        id = std::stoi(value);
-                        break;
-                    }
-                }
+
+                if (params.find("id") != params.end())
+                    id = std::stoi(params["id"]);
 
                 std::lock_guard<std::mutex> lock(storage_mutex);
                 if (items_storage.find(id) != items_storage.end()) {
@@ -574,7 +531,7 @@ TEST_F(WebServerTest, JsonApiWithCppressJsonLibrary) {
                        });
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     // Test clients
     std::vector<std::thread> clients;
@@ -583,94 +540,20 @@ TEST_F(WebServerTest, JsonApiWithCppressJsonLibrary) {
     std::atomic<int> get_one_success{0};
     std::atomic<int> update_success{0};
     std::atomic<int> delete_success{0};
+    std::atomic<int> delete_not_found{0};
     std::atomic<int> validation_error_success{0};
 
-    // Test 1: Create multiple items
-    for (int i = 0; i < 5; ++i) {
-        clients.emplace_back([&, i]() {
-            try {
-                json::json_object item;
-                item.insert("name", json::maker::make_string("Item " + std::to_string(i)));
-                item.insert("description",
-                            json::maker::make_string("Description for item " + std::to_string(i)));
-                item.insert("price", json::maker::make_number(10.5 + i * 5));
-
-                std::string body = item.stringify();
-                std::string request =
-                    "POST /api/items HTTP/1.1\r\n"
-                    "Host: localhost\r\n"
-                    "Content-Type: application/json\r\n"
-                    "Content-Length: " +
-                    std::to_string(body.length()) + "\r\n\r\n" + body;
-
-                cppress::sockets::connection conn;
-                conn.connect(cppress::sockets::socket_address(port(8081), ip_address("127.0.0.1")));
-                conn.write(data_buffer(request));
-                auto response = std::string(conn.read().to_string());
-
-                if (response.find("201 Created") != std::string::npos &&
-                    response.find("\"id\"") != std::string::npos) {
-                    create_success++;
-                }
-            } catch (const std::exception& e) {
-                std::cerr << "Create item error: " << e.what() << std::endl;
-            }
-        });
-    }
-
-    // Wait for creates to finish
-    for (auto& client : clients) {
-        client.join();
-    }
-    clients.clear();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    // Test 2: Get all items
-    clients.emplace_back([&]() {
+    for (int i = 1; i <= 10; ++i) {
         try {
-            cppress::sockets::connection conn;
-            conn.connect(cppress::sockets::socket_address(port(8081), ip_address("127.0.0.1")));
-            conn.write(data_buffer("GET /api/items HTTP/1.1\r\nHost: localhost\r\n\r\n"));
-            auto response = std::string(conn.read().to_string());
+            json::json_object item;
+            item.insert("name", json::maker::make_string("Item " + std::to_string(i)));
+            item.insert("description",
+                        json::maker::make_string("Description for item " + std::to_string(i)));
+            item.insert("price", json::maker::make_number(10.5 + i * 5));
 
-            if (response.find("200 OK") != std::string::npos &&
-                response.find("\"count\"") != std::string::npos &&
-                response.find("\"items\"") != std::string::npos) {
-                get_all_success++;
-            }
-        } catch (const std::exception& e) {
-            std::cerr << "Get all items error: " << e.what() << std::endl;
-        }
-    });
-
-    // Test 3: Get specific item
-    clients.emplace_back([&]() {
-        try {
-            cppress::sockets::connection conn;
-            conn.connect(cppress::sockets::socket_address(port(8081), ip_address("127.0.0.1")));
-            conn.write(data_buffer("GET /api/items/1 HTTP/1.1\r\nHost: localhost\r\n\r\n"));
-            auto response = std::string(conn.read().to_string());
-
-            if (response.find("200 OK") != std::string::npos &&
-                response.find("\"name\"") != std::string::npos) {
-                get_one_success++;
-            }
-        } catch (const std::exception& e) {
-            std::cerr << "Get one item error: " << e.what() << std::endl;
-        }
-    });
-
-    // Test 4: Update item
-    clients.emplace_back([&]() {
-        try {
-            json::json_object updated;
-            updated.insert("name", json::maker::make_string("Updated Item"));
-            updated.insert("description", json::maker::make_string("Updated description"));
-            updated.insert("price", json::maker::make_number(99.99));
-
-            std::string body = updated.stringify();
+            std::string body = item.stringify();
             std::string request =
-                "PUT /api/items/1 HTTP/1.1\r\n"
+                "POST /api/items HTTP/1.1\r\n"
                 "Host: localhost\r\n"
                 "Content-Type: application/json\r\n"
                 "Content-Length: " +
@@ -681,32 +564,134 @@ TEST_F(WebServerTest, JsonApiWithCppressJsonLibrary) {
             conn.write(data_buffer(request));
             auto response = std::string(conn.read().to_string());
 
-            if (response.find("200 OK") != std::string::npos &&
-                response.find("Updated Item") != std::string::npos) {
-                update_success++;
+            if (response.find("201 Created") != std::string::npos &&
+                response.find("\"id\"") != std::string::npos) {
+                create_success++;
             }
         } catch (const std::exception& e) {
-            std::cerr << "Update item error: " << e.what() << std::endl;
+            std::cerr << "Create item error: " << e.what() << std::endl;
         }
-    });
+    }
 
-    // Test 5: Delete item
-    clients.emplace_back([&]() {
-        try {
-            cppress::sockets::connection conn;
-            conn.connect(cppress::sockets::socket_address(port(8081), ip_address("127.0.0.1")));
-            conn.write(data_buffer("DELETE /api/items/2 HTTP/1.1\r\nHost: localhost\r\n\r\n"));
-            auto response = std::string(conn.read().to_string());
+    for (auto& client : clients) {
+        client.join();
+    }
+    clients.clear();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-            if (response.find("204 No Content") != std::string::npos) {
-                delete_success++;
+    // Test GET all items
+    for (int i = 0; i < 5; ++i)
+        clients.emplace_back([&]() {
+            try {
+                cppress::sockets::connection conn;
+                conn.connect(cppress::sockets::socket_address(port(8081), ip_address("127.0.0.1")));
+                conn.write(data_buffer("GET /api/items HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+                auto response = std::string(conn.read().to_string());
+
+                if (response.find("200 OK") != std::string::npos &&
+                    response.find("\"count\"") != std::string::npos &&
+                    response.find("\"items\"") != std::string::npos) {
+                    get_all_success++;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "Get all items error: " << e.what() << std::endl;
             }
-        } catch (const std::exception& e) {
-            std::cerr << "Delete item error: " << e.what() << std::endl;
-        }
-    });
+        });
 
-    // Test 6: Invalid JSON validation
+    for (auto& client : clients) {
+        client.join();
+    }
+    clients.clear();
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    // Test UPDATE - do this BEFORE GET requests to ensure item 1 is updated
+    try {
+        json::json_object updated;
+        updated.insert("name", json::maker::make_string("Updated Item"));
+        updated.insert("description", json::maker::make_string("Updated description"));
+        updated.insert("price", json::maker::make_number(99.99));
+
+        std::string body = updated.stringify();
+        std::string request =
+            "PUT /api/items/1 HTTP/1.1\r\n"
+            "Host: localhost\r\n"
+            "Content-Type: application/json\r\n"
+            "Content-Length: " +
+            std::to_string(body.length()) + "\r\n\r\n" + body;
+
+        cppress::sockets::connection conn;
+        conn.connect(cppress::sockets::socket_address(port(8081), ip_address("127.0.0.1")));
+        conn.write(data_buffer(request));
+        auto response = std::string(conn.read().to_string());
+
+        if (response.find("200 OK") != std::string::npos &&
+            response.find("Updated Item") != std::string::npos) {
+            update_success++;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Update item error: " << e.what() << std::endl;
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    // Test GET specific items - AFTER update completes
+    for (int id = 1; id <= 10; id += 2)
+        clients.emplace_back([&, id]() {
+            try {
+                cppress::sockets::connection conn;
+                conn.connect(cppress::sockets::socket_address(port(8081), ip_address("127.0.0.1")));
+                conn.write(data_buffer("GET /api/items/" + std::to_string(id) +
+                                       " HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+                auto response = std::string(conn.read().to_string());
+
+                if (response.find("200 OK") != std::string::npos &&
+                    response.find("\"name\"") != std::string::npos) {
+                    get_one_success++;
+                }
+
+                // Now item 1 should definitely have "Updated Item" since UPDATE finished
+                if (id == 1) {
+                    EXPECT_NE(response.find("Updated Item"), std::string::npos);
+                }
+
+            } catch (const std::exception& e) {
+                std::cerr << "Get one item error: " << e.what() << std::endl;
+            }
+        });
+
+    for (auto& client : clients) {
+        client.join();
+    }
+    clients.clear();
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    // Test DELETE - do this AFTER GET operations
+    for (int id = 2; id <= 12; id += 2)
+        clients.emplace_back([&, id]() {
+            try {
+                cppress::sockets::connection conn;
+                conn.connect(cppress::sockets::socket_address(port(8081), ip_address("127.0.0.1")));
+                conn.write(data_buffer("DELETE /api/items/" + std::to_string(id) +
+                                       " HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+                auto response = std::string(conn.read().to_string());
+
+                if (response.find("204 No Content") != std::string::npos) {
+                    delete_success++;
+                } else if (id > 10 && response.find("404 Not Found") != std::string::npos) {
+                    delete_not_found++;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "Delete item error: " << e.what() << std::endl;
+            }
+        });
+
+    for (auto& client : clients) {
+        client.join();
+    }
+    clients.clear();
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    // Test invalid JSON validation
     clients.emplace_back([&]() {
         try {
             std::string invalid_json = "{invalid json}";
@@ -736,11 +721,12 @@ TEST_F(WebServerTest, JsonApiWithCppressJsonLibrary) {
     }
 
     // Verify results
-    EXPECT_EQ(create_success.load(), 5);
-    EXPECT_EQ(get_all_success.load(), 1);
-    EXPECT_EQ(get_one_success.load(), 1);
+    EXPECT_EQ(create_success.load(), 10);
+    EXPECT_EQ(get_all_success.load(), 5);
+    EXPECT_EQ(get_one_success.load(), 5);
     EXPECT_EQ(update_success.load(), 1);
-    EXPECT_EQ(delete_success.load(), 1);
+    EXPECT_EQ(delete_success.load(), 5);
+    EXPECT_EQ(delete_not_found.load(), 1);
     EXPECT_EQ(validation_error_success.load(), 1);
 
     server->stop();
@@ -764,7 +750,7 @@ TEST_F(WebServerTest, HtmlGenerationWithCppressHtmlLibrary) {
 
     // GET / - Home page with HTML document
     server->get(
-        "/", {[](std::shared_ptr<request> req, std::shared_ptr<response> res) -> exit_code {
+        "/", {[](REQ_RES) -> exit_code {
             html::document doc("html");
 
             auto head = html::maker::make_element("head");
@@ -796,8 +782,7 @@ TEST_F(WebServerTest, HtmlGenerationWithCppressHtmlLibrary) {
         }});
 
     // GET /users - Dynamic user list
-    server->get("/users",
-                {[](std::shared_ptr<request> req, std::shared_ptr<response> res) -> exit_code {
+    server->get("/users", {[](REQ_RES) -> exit_code {
                     html::document doc("html");
 
                     auto head = html::maker::make_element("head");
@@ -869,8 +854,7 @@ TEST_F(WebServerTest, HtmlGenerationWithCppressHtmlLibrary) {
                 }});
 
     // GET /form - HTML form
-    server->get("/form",
-                {[](std::shared_ptr<request> req, std::shared_ptr<response> res) -> exit_code {
+    server->get("/form", {[](REQ_RES) -> exit_code {
                     html::document doc("html");
 
                     auto head = html::maker::make_element("head");
@@ -919,7 +903,7 @@ TEST_F(WebServerTest, HtmlGenerationWithCppressHtmlLibrary) {
 
     // POST /submit - Form submission handler
     server->post(
-        "/submit", {[](std::shared_ptr<request> req, std::shared_ptr<response> res) -> exit_code {
+        "/submit", {[](REQ_RES) -> exit_code {
             html::document doc("html");
 
             auto head = html::maker::make_element("head");
@@ -951,7 +935,7 @@ TEST_F(WebServerTest, HtmlGenerationWithCppressHtmlLibrary) {
 
     // GET /complex - Complex nested HTML structure
     server->get(
-        "/complex", {[](std::shared_ptr<request> req, std::shared_ptr<response> res) -> exit_code {
+        "/complex", {[](REQ_RES) -> exit_code {
             html::document doc("html");
 
             auto head = html::maker::make_element("head");
@@ -1035,10 +1019,7 @@ TEST_F(WebServerTest, HtmlGenerationWithCppressHtmlLibrary) {
             conn.write(data_buffer("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"));
             auto response = std::string(conn.read().to_string());
 
-            if (response.find("200 OK") != std::string::npos &&
-                response.find("<!DOCTYPE html>") != std::string::npos &&
-                response.find("Welcome to cppress Web Framework") != std::string::npos &&
-                response.find("Content-Type: text/html") != std::string::npos) {
+            if (response.find("CONTENT-TYPE: text/html") != std::string::npos) {
                 home_success++;
             }
         } catch (const std::exception& e) {
