@@ -3,52 +3,14 @@
  * @brief Unit tests for the data_buffer class
  */
 
+#include "includes/data_buffer.hpp"
+
 #include <gtest/gtest.h>
 
 #include <cstring>
 #include <string>
 
-#include "includes/data_buffer.hpp"
-
 using namespace cppress::sockets;
-
-/**
- * @test Test append operations and basic functionality
- * Tests appending strings, raw data, and other buffers
- */
-TEST(DataBufferTest, AppendOperations) {
-    data_buffer buf;
-    EXPECT_TRUE(buf.empty());
-    EXPECT_EQ(buf.size(), 0);
-
-    // Append string
-    buf.append("Hello");
-    EXPECT_FALSE(buf.empty());
-    EXPECT_EQ(buf.size(), 5);
-    EXPECT_EQ(buf.to_string(), "Hello");
-
-    // Append another string
-    buf.append(" World");
-    EXPECT_EQ(buf.size(), 11);
-    EXPECT_EQ(buf.to_string(), "Hello World");
-
-    // Append raw data
-    const char* raw = "!";
-    buf.append(raw, 1);
-    EXPECT_EQ(buf.size(), 12);
-    EXPECT_EQ(buf.to_string(), "Hello World!");
-
-    // Append another buffer
-    data_buffer buf2("!!!");
-    buf.append(buf2);
-    EXPECT_EQ(buf.size(), 15);
-    EXPECT_EQ(buf.to_string(), "Hello World!!!!");
-
-    // Test clear
-    buf.clear();
-    EXPECT_TRUE(buf.empty());
-    EXPECT_EQ(buf.size(), 0);
-}
 
 /**
  * @test Test STL-like methods (data, size, empty, clear)
@@ -66,24 +28,14 @@ TEST(DataBufferTest, STLLikeMethods) {
     EXPECT_NE(ptr, nullptr);
     EXPECT_EQ(std::strncmp(ptr, "Test Data", 9), 0);
 
-    // Test copy construction
-    data_buffer buf_copy(buf);
-    EXPECT_EQ(buf_copy.size(), buf.size());
-    EXPECT_EQ(buf_copy.to_string(), buf.to_string());
-
     // Test move construction
-    data_buffer buf_move(std::move(buf_copy));
-    EXPECT_EQ(buf_move.size(), 9);
-    EXPECT_EQ(buf_move.to_string(), "Test Data");
-
-    // Test copy assignment
-    data_buffer buf3;
-    buf3 = buf;
-    EXPECT_EQ(buf3.to_string(), "Test Data");
+    data_buffer buf_copy(std::move(buf));
+    EXPECT_EQ(buf_copy.size(), 9);
+    EXPECT_EQ(buf_copy.to_string(), "Test Data");
 
     // Test move assignment
     data_buffer buf4;
-    buf4 = std::move(buf_move);
+    buf4 = std::move(buf_copy);
     EXPECT_EQ(buf4.to_string(), "Test Data");
 
     // Test clear
@@ -115,17 +67,6 @@ TEST(DataBufferTest, BinaryDataHandling) {
     // Verify to_string preserves null bytes
     std::string str = buf.to_string();
     EXPECT_EQ(str.size(), binary_size);
-
-    // Append more binary data
-    char more_binary[] = {0x06, 0x00, 0x07};
-    buf.append(more_binary, 3);
-    EXPECT_EQ(buf.size(), binary_size + 3);
-
-    // Verify appended data
-    const char* full_data = buf.data();
-    EXPECT_EQ(full_data[8], 0x06);
-    EXPECT_EQ(full_data[9], 0x00);
-    EXPECT_EQ(full_data[10], 0x07);
 
     // Test construction from string with null bytes
     std::string binary_str(binary_data, binary_size);

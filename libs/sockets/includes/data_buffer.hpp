@@ -8,7 +8,7 @@
  *
  * @section usage Common Usage Patterns
  *
- * **Basic Construction and Appending:**
+ * **Basic Construction and Move Semantics:**
  * @code
  * #include "data_buffer.hpp"
  * using namespace cppress::sockets;
@@ -23,10 +23,10 @@
  * char raw[] = {0x48, 0x65, 0x6C, 0x6C, 0x6F};
  * data_buffer buf3(raw, 5);
  *
- * // Append data
- * buf1.append("Data");
- * buf1.append(raw, 5);
- * buf1.append(buf2);
+ * // Move-only: cannot copy, must use std::move
+ * // data_buffer buf4 = buf2;  // ERROR: Copy constructor deleted
+ * data_buffer buf4 = std::move(buf2);  // OK: Move constructor
+ * // buf2 is now empty after the move
  * @endcode
  *
  * **Network I/O Usage:**
@@ -36,7 +36,7 @@
  * connection conn = server.accept();
  *
  * while (conn.is_open()) {
- *     auto chunk = conn.read();
+ *     auto chunk = conn.read();  // Returns data_buffer (move semantics)
  *     received_data.append(chunk);
  *
  *     if (received_data.size() >= expected_size) {
@@ -46,6 +46,10 @@
  *
  * // Process complete data
  * std::string message = received_data.to_string();
+ *
+ * // Transfer ownership using move semantics
+ * data_buffer transferred = std::move(received_data);
+ * // received_data is now empty
  * @endcode
  *
  * **STL-like Operations:**
@@ -75,8 +79,7 @@
  * - Used in streaming protocols for data accumulation
  *
  * @section performance Performance Characteristics
- * - Append operations: Amortized O(1) time complexity
- * - Copy construction/assignment: O(n) where n is buffer size
+ * - Move-only class: Copy operations are deleted to prevent accidental copying
  * - Move operations: O(1) constant time
  * - Memory: Single contiguous allocation via std::vector
  * - Clear operation: Deallocates memory with shrink_to_fit()
@@ -104,6 +107,9 @@ namespace cppress::sockets {
  * multiple sources (like network I/O, file reading, or HTTP parsing) and provides
  * seamless conversion between different data representations.
  *
+ * @note Move-only type: Copy operations are explicitly deleted to prevent accidental
+ * copying of potentially large buffers. Use move semantics (std::move) to transfer
+ * ownership efficiently.
  * @note Uses explicit constructors to prevent implicit conversions for type safety.
  */
 class data_buffer {
@@ -119,7 +125,7 @@ public:
      * and ready to accept data through append operations.
      * Marked explicit to prevent implicit conversions.
      */
-    explicit data_buffer() = default;
+    data_buffer() = default;
 
     /**
      * @brief Construct buffer from a string.
@@ -128,7 +134,11 @@ public:
      * Creates a data_buffer containing a copy of the string's characters.
      * The resulting buffer will have the same content as the string.
      */
-    explicit data_buffer(const std::string& str) : buffer(str.begin(), str.end()) {}
+    data_buffer(const std::string& str) {
+        if (str.size() < buffer.max_size()) {
+            buffer.insert(buffer.end(), str.begin(), str.end());
+        }
+    }
 
     /**
      * @brief Construct buffer from raw character data.
@@ -147,26 +157,30 @@ public:
      * data_buffer buf(raw_data, 7);  // Includes the null byte
      * @endcode
      */
-    explicit data_buffer(const char* data, std::size_t size) : buffer(data, data + size) {}
-
-    // Copy operations
-    /**
-     * @brief Copy constructor.
-     * @param other Buffer to copy from
-     *
-     * Creates a deep copy of another data_buffer. The new buffer will contain
-     * a complete copy of the source buffer's data.
-     */
-    data_buffer(const data_buffer& other) = default;
+    data_buffer(const char* data, std::size_t size) {
+        if (size < buffer.max_size()) {
+            buffer.insert(buffer.end(), data, data + size);
+        }
+    }
 
     /**
-     * @brief Copy assignment operator.
-     * @param other Buffer to copy from
-     * @return Reference to this buffer after assignment
-     *
-     * Replaces this buffer's content with a copy of the other buffer's data.
+     * @brief Construct buffer from null-terminated C-string.
+     * @param data Null-terminated C-string to initialize the buffer with
+     *   @note if data is nullptr or not null-terminated, behavior is undefined.
      */
-    data_buffer& operator=(const data_buffer& other) = default;
+    data_buffer(const char* data) {
+        std::size_t size = std::strlen(data);
+        if (size < buffer.max_size()) {
+            buffer.insert(buffer.end(), data, data + size);
+        }
+    }
+
+    // Move-only: copy operations deleted to prevent accidental copying of potentially large buffers
+    /// @brief Copy constructor (deleted) - class is move-only.
+    data_buffer(const data_buffer& other) = delete;
+
+    /// @brief Copy assignment operator (deleted) - class is move-only.
+    data_buffer& operator=(const data_buffer& other) = delete;
 
     // Move operations
     /**
@@ -177,47 +191,22 @@ public:
      * The source buffer becomes empty after the move. This operation is O(1)
      * and doesn't copy the actual data.
      */
-    data_buffer(data_buffer&& other) = default;
+    data_buffer(data_buffer&& other) {
+        buffer = std::move(other.buffer);
+        other.clear();
+    }
 
     /**
      * @brief Move assignment operator.
      * @param other Buffer to move from
      * @return Reference to this buffer after assignment
      */
-    data_buffer& operator=(data_buffer&& other) = default;
-
-    /**
-     * @brief Append raw character data to the buffer.
-     * @param data Pointer to the character data to append
-     * @param size Number of bytes to append from data
-     *
-     * Adds the specified number of bytes from the character array to the end
-     * of the buffer. The buffer will automatically resize to accommodate the
-     * new data.
-     *
-     * @warning The caller must ensure that 'data' points to at least 'size' bytes
-     */
-    void append(const char* data, std::size_t size) {
-        buffer.insert(buffer.end(), data, data + size);
-    }
-
-    /**
-     * @brief Append a string to the buffer.
-     * @param str String to append
-     *
-     * Adds all characters from the string to the end of the buffer.
-     * This is equivalent to calling append(str.data(), str.size()).
-     */
-    void append(const std::string& str) { buffer.insert(buffer.end(), str.begin(), str.end()); }
-
-    /**
-     * @brief Append another data_buffer to this buffer.
-     * @param other Buffer to append
-     *
-     * Adds all bytes from the other buffer to the end of this buffer.
-     */
-    void append(const data_buffer& other) {
-        buffer.insert(buffer.end(), other.buffer.begin(), other.buffer.end());
+    data_buffer& operator=(data_buffer&& other) {
+        if (this != &other) {
+            buffer = std::move(other.buffer);
+            other.clear();
+        }
+        return *this;
     }
 
     /**

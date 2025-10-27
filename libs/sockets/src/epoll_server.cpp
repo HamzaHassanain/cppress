@@ -51,6 +51,7 @@
 #include "../includes/utilities.hpp"
 
 namespace cppress::sockets {
+
 void epoll_server::try_accept() {
     // Accept as many connections as possible (edge-triggered)
     while (true) {
@@ -115,31 +116,39 @@ void epoll_server::try_accept() {
 }
 
 void epoll_server::try_read(epoll_connection& c) {
+    const int BUFFER_SIZE = 64 * 1024;
+    char* buf = new char[BUFFER_SIZE];
     try {
-        char buf[64 * 1024];  // 64KB buffer for high throughput
         std::size_t sz = 64 * 1024;
         int fd = c.conn->native_handle();
         // Read as much data as possible (edge-triggered)
         while (!c.want_close) {
-            std::size_t m = ::recv(fd, buf, sz, 0);
+            int m = ::recv(fd, buf, sz, 0);
             if (m > 0) {
                 on_message_received(c.conn, data_buffer(buf, m));
+                // Check if handler requested connection close
+                if (c.want_close) {
+                    break;
+                }
             } else if (m == 0) {
-                // Peer closed connection gracefully
-                close_conn(fd);
-                return;
+                // Peer closed connection gracefully - mark for closure
+                c.want_close = true;
+                break;
             } else {
                 // Error or would block
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
-                    break;  // No more data available
-                // Connection error, close it
-                close_conn(fd);
-                return;
+                    break;  // No more data available - connection stays alive
+                // Connection error - mark for closure
+                c.want_close = true;
+                break;
             }
         }
     } catch (const std::exception& e) {
         on_exception_occurred(e);
+        c.want_close = true;  // Mark for closure on exception
     }
+
+    delete[] buf;
 }
 #if defined(__linux__) || defined(__linux)
 
@@ -312,6 +321,34 @@ void epoll_server::epoll_loop(int timeout) {
                 }
                 epoll_connection& c = it->second;
 
+                // Handle connection errors and closures FIRST
+                if (ev & (EPOLLERR | EPOLLHUP)) {
+                    // Only close if no pending writes (allow drain)
+                    if (c.outq.empty()) {
+                        close_conn(fd);
+                        continue;
+                    }
+                }
+
+                // Handle custom close events (requested by application)
+                if (ev & HAMZA_CUSTOM_CLOSE_EVENT) {
+                    // Flush pending writes before closing
+                    if (!c.outq.empty()) {
+                        flush_writes(c);
+                    }
+                    close_conn(fd);
+                    continue;
+                }
+
+                // Handle incoming data (EPOLLIN)
+                if (ev & EPOLLIN) {
+                    try_read(c);
+                    // Revalidate connection after read (might have been marked for closure)
+                    if (conns.find(fd) == conns.end()) {
+                        continue;  // Connection was closed
+                    }
+                }
+
                 // Handle write flow control and output queue management
                 if (!c.outq.empty()) {
                     // Try to flush immediately to avoid extra EPOLLOUT wakeup
@@ -340,27 +377,15 @@ void epoll_server::epoll_loop(int timeout) {
                     // If flush_writes returns false, keep EPOLLOUT enabled
                 }
 
-                // Handle connection errors and closures
-                if (ev & (EPOLLERR | EPOLLHUP)) {
-                    if (!c.want_write)
-                        close_conn(fd);
+                // After all I/O operations, check if connection should be closed
+                if (c.want_close) {
+                    // Flush any remaining data before closing
+                    if (!c.outq.empty()) {
+                        flush_writes(c);
+                    }
+                    close_conn(fd);
                     continue;
                 }
-
-                // Handle custom close events (requested by application)
-                if (ev & HAMZA_CUSTOM_CLOSE_EVENT) {
-                    if (!c.want_write)
-                        close_conn(fd);
-                    continue;
-                }
-
-                // Handle incoming data (EPOLLIN)
-                if (ev & EPOLLIN) {
-                    try_read(c);
-                }
-
-            next_event:
-                continue;
             }
             // After processing all events, you try to accept the connections that failed
             if (listener_socket)
@@ -435,8 +460,12 @@ void epoll_server::send_message(std::shared_ptr<connection> conn, const data_buf
     epoll_connection& c = it->second;
     c.outq.emplace_back(db.to_string());
 
-    // Enable write monitoring to flush the queue
-    mod_epoll(fd, EPOLLOUT);
+    // Enable write monitoring while preserving read capability (critical for persistent
+    // connections)
+    if (!c.want_write) {
+        c.want_write = true;
+        mod_epoll(fd, EPOLLIN | EPOLLOUT | EPOLLET);
+    }
 }
 
 // ============================================================================

@@ -190,19 +190,23 @@ data_buffer socket::receive(socket_address& client_addr) {
     sockaddr_storage sender_addr;
     socklen_t sender_addr_len = sizeof(sender_addr);
 
-    // Use 64KB buffer for UDP - theoretical max UDP payload is 65507 bytes
-    char buffer[MAX_BUFFER_SIZE];
+    const int BUFFER_SIZE = 65536;
+    char* buffer = new char[BUFFER_SIZE];
 
-    int bytes_received = ::recvfrom(fd.native_handle(), buffer, sizeof(buffer), 0,
+    int bytes_received = ::recvfrom(fd.native_handle(), buffer, BUFFER_SIZE, 0,
                                     reinterpret_cast<sockaddr*>(&sender_addr), &sender_addr_len);
 
     if (bytes_received == SOCKET_ERROR_VALUE) {
+        delete[] buffer;
         throw socket_exception("Failed to receive data: " + std::string(get_error_message()),
                                "SocketReceive", __func__);
     }
 
     client_addr = socket_address(sender_addr);
-    return data_buffer(buffer, static_cast<std::size_t>(bytes_received));
+
+    data_buffer received_data = data_buffer(buffer, static_cast<std::size_t>(bytes_received));
+    delete[] buffer;
+    return received_data;
 }
 
 void socket::send_to(const socket_address& addr, const data_buffer& data) {

@@ -111,11 +111,11 @@ inline std::shared_ptr<cppress::json::json_object> make_number(long value) {
 }
 
 /**
- * @brief Creates a JSON number object from a long long.
- * @param value The long long value.
+ * @brief Creates a JSON number object from a std::size_t.
+ * @param value The std::size_t value.
  * @return A shared pointer to a json_number.
  */
-inline std::shared_ptr<cppress::json::json_object> make_number(long long value) {
+inline std::shared_ptr<cppress::json::json_object> make_number(std::size_t value) {
     return std::make_shared<cppress::json::json_number>(value);
 }
 

@@ -78,8 +78,7 @@ TEST(ConnectionTest, MultithreadedMultipleConnections) {
                 [conn = std::move(client_conn), &successful_connections]() mutable {
                     try {
                         data_buffer request = conn->read();
-                        data_buffer response("Server received: ");
-                        response.append(request);
+                        data_buffer response("Server received: " + request.to_string());
                         conn->write(response);
 
                         successful_connections++;
@@ -102,8 +101,9 @@ TEST(ConnectionTest, MultithreadedMultipleConnections) {
                 cppress::sockets::socket client_sock(family::ipv4(), socket::type::stream);
                 std::shared_ptr<connection> conn = client_sock.connect(server_addr);
 
-                data_buffer request("Client ");
-                request.append(std::to_string(i));
+                data_buffer request("Client " + std::to_string(i));
+                ;
+
                 conn->write(request);
 
                 data_buffer response = conn->read();

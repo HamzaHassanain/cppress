@@ -79,7 +79,7 @@ fi
 
 # ==================== NORMAL BUILD ====================
 if [ "$1" = "build" ] || [ -z "$1" ]; then
-    BUILD_TYPE=${2:-Release}
+    BUILD_TYPE=${2:-Debug}
     
     # Normalize build type
     case ${BUILD_TYPE,,} in
@@ -100,7 +100,7 @@ if [ "$1" = "build" ] || [ -z "$1" ]; then
             if [ -n "$2" ]; then
                 echo "Unknown build type: $2, using Release"
             fi
-            BUILD_TYPE="Release"
+            BUILD_TYPE="Debug"
         ;;
     esac
     

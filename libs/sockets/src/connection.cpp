@@ -41,11 +41,9 @@ data_buffer connection::read() {
         fd.native_handle() == INVALID_SOCKET_VALUE) {
         return data_buffer();
     }
-
-    data_buffer received_data;
-    char buffer[MAX_BUFFER_SIZE];
-
-    int bytes_received = ::recv(fd.native_handle(), buffer, sizeof(buffer), 0);
+    const int BUFFER_SIZE = 65536;
+    char* buffer = new char[BUFFER_SIZE];  // 64KB buffer
+    int bytes_received = ::recv(fd.native_handle(), buffer, BUFFER_SIZE, 0);
 
     /// EOF
     if (bytes_received == 0) {
@@ -74,7 +72,9 @@ data_buffer connection::read() {
                                "SocketRead", __func__);
     }
 
-    received_data.append(buffer, bytes_received);
+    data_buffer received_data(buffer, static_cast<std::size_t>(bytes_received));
+    delete[] buffer;
+
     return received_data;
 }
 

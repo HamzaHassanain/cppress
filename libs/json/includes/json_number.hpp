@@ -49,10 +49,10 @@ public:
     json_number(long value) : value(static_cast<double>(value)) {}
 
     /**
-     * @brief Constructs a JSON number from a long long.
-     * @param value The long long value.
+     * @brief Constructs a JSON number from a std::size_t.
+     * @param value The std::size_t value.
      */
-    json_number(long long value) : value(static_cast<double>(value)) {}
+    json_number(std::size_t value) : value(static_cast<double>(value)) {}
 
     /**
      * @brief Constructs a JSON number from a float.
@@ -109,8 +109,8 @@ public:
      * @note Integers are formatted without decimal points.
      */
     std::string stringify() const override {
-        if ((long long)value == value)
-            return std::to_string((long long)value);
+        if ((std::size_t)value == value)
+            return std::to_string((std::size_t)value);
         return std::to_string(value);
     }
 
@@ -128,10 +128,10 @@ public:
     long to_long() const noexcept { return static_cast<long>(value); }
 
     /**
-     * @brief Converts to long long.
-     * @return The value as a long long.
+     * @brief Converts to std::size_t.
+     * @return The value as a std::size_t.
      */
-    long long to_long_long() const noexcept { return static_cast<long long>(value); }
+    std::size_t to_long_long() const noexcept { return static_cast<std::size_t>(value); }
 
     /**
      * @brief Converts to float.
@@ -149,7 +149,7 @@ public:
      * @brief Checks if the number is an integer.
      * @return true if the value has no fractional part, false otherwise.
      */
-    bool is_integer() const noexcept { return value == static_cast<long long>(value); }
+    bool is_integer() const noexcept { return value == static_cast<std::size_t>(value); }
 
     /**
      * @brief Checks if the number is finite (not infinity or NaN).
@@ -189,10 +189,10 @@ public:
     explicit operator long() const noexcept { return to_long(); }
 
     /**
-     * @brief Explicit conversion to long long.
-     * @return The value as a long long.
+     * @brief Explicit conversion to std::size_t.
+     * @return The value as a std::size_t.
      */
-    explicit operator long long() const noexcept { return to_long_long(); }
+    explicit operator std::size_t() const noexcept { return to_long_long(); }
 
     /**
      * @brief Explicit conversion to float.
@@ -280,4 +280,4 @@ public:
     }
 };
 
-}  // namespace cppress
+}  // namespace cppress::json

@@ -579,19 +579,14 @@ TEST(HttpServerTest, ConnectionReuseForSameRequest) {
     try {
         cppress::sockets::connection conn;
         conn.connect(cppress::sockets::socket_address(port(9983), ip_address("127.0.0.1")));
-        conn.write(data_buffer("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"));
-        const std::string response1 = std::string(conn.read().to_string());
-        conn.write(data_buffer("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"));
-        const std::string response2 = std::string(conn.read().to_string());
-        conn.write(data_buffer("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"));
-        const std::string response3 = std::string(conn.read().to_string());
-        conn.write(data_buffer("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"));
-        const std::string response4 = std::string(conn.read().to_string());
-        conn.write(data_buffer("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"));
-        const std::string response5 = std::string(conn.read().to_string());
 
-        EXPECT_NE(response5.find("200 OK"), std::string::npos);
-        // EXPECT_EQ(response.find("X-REQUEST-COUNT"), 0);
+        for (int i = 0; i < 5; ++i) {
+            conn.write(data_buffer("GET /reuse HTTP/1.1\r\nHost: localhost\r\n\r\n"));
+            auto response = std::string(conn.read().to_string());
+
+            EXPECT_NE(response.find("200 OK"), std::string::npos);
+            EXPECT_NE(response.find("Request number: " + std::to_string(i + 1)), std::string::npos);
+        }
     } catch (const std::exception& e) {
         std::cerr << "Request error: " << e.what() << std::endl;
     }
