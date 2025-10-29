@@ -115,16 +115,13 @@ protected:
     /**
      * @brief Called when a message is received from a connection.
      *
-     * This callback receives the raw data as a `data_buffer`. The
-     * derived class is responsible for parsing and acting upon the
-     * contents. Implementations should document whether the buffer is
-     * valid after the callback returns or must be copied for asynchronous
-     * processing.
-     *
+     * The derived class is responsible for reading the available data
+     * from the connection and processing it as needed. This may involve
+     *  parsing application-level protocols, responding to requests,
+     *  or queuing the data for further processing.
      * @param conn Shared pointer to the connection that sent the data.
-     * @param db   The received data buffer.
      */
-    virtual void on_message_received(std::shared_ptr<connection> conn, const data_buffer& db) = 0;
+    virtual void on_data_available(std::shared_ptr<connection> conn) = 0;
 
     /**
      * @brief Called when the server successfully begins listening.

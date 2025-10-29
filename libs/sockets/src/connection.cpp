@@ -47,6 +47,7 @@ data_buffer connection::read() {
 
     /// EOF
     if (bytes_received == 0) {
+        delete[] buffer;
         return data_buffer();
     }
     if (bytes_received == SOCKET_ERROR_VALUE) {
@@ -56,14 +57,15 @@ data_buffer connection::read() {
 
         @throw error for the follwing return values
         ECONNRESET: The connection was forcibly closed by the peer.
-        EINTR: The function call was interrupted by a signal.
         */
 #if defined(SOCKET_PLATFORM_UNIX)
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+            delete[] buffer;
             return data_buffer();
         }
 #elif defined(SOCKET_PLATFORM_WINDOWS)
         if (WSAGetLastError() == WSAEWOULDBLOCK || WSAGetLastError() == WSAEINTR) {
+            delete[] buffer;
             return data_buffer();
         }
 #endif

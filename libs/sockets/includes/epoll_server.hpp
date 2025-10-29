@@ -298,17 +298,14 @@ protected:
     /**
      * @brief Called when data is received from a client
      * @param conn Shared pointer to the connection that sent data
-     * @param db Data buffer containing the received data
      *
-     * Default implementation spawns a detached thread to handle the message,
-     * providing an echo server functionality. Derived classes should override
-     * this to implement custom message processing logic.
-     *
+     * Default implementation:
+     * - Logs the received message to stdout
+     * - Echoes the message back to the sender
+     * - Closes the connection if the message is "close\n"
      * @note Virtual function - should be overridden by derived classes
-     * @note Default implementation uses detached threads - consider thread pool for production
      */
-    virtual void on_message_received(std::shared_ptr<connection> conn,
-                                     const data_buffer& db) override;
+    virtual void on_data_available(std::shared_ptr<connection> conn) override;
 
     /**
      * @brief Called when the server successfully starts listening

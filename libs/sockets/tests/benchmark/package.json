@@ -1,0 +1,18 @@
+{
+  "name": "benchmark",
+  "version": "1.0.0",
+  "description": "Stress testing for cppress HTTP server",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js",
+    "stress": "node index.js"
+  },
+  "keywords": [
+    "stress-test",
+    "benchmark",
+    "http",
+    "cppress"
+  ],
+  "author": "",
+  "license": "ISC"
+}

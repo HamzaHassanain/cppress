@@ -116,39 +116,12 @@ void epoll_server::try_accept() {
 }
 
 void epoll_server::try_read(epoll_connection& c) {
-    const int BUFFER_SIZE = 64 * 1024;
-    char* buf = new char[BUFFER_SIZE];
     try {
-        std::size_t sz = 64 * 1024;
-        int fd = c.conn->native_handle();
-        // Read as much data as possible (edge-triggered)
-        while (!c.want_close) {
-            int m = ::recv(fd, buf, sz, 0);
-            if (m > 0) {
-                on_message_received(c.conn, data_buffer(buf, m));
-                // Check if handler requested connection close
-                if (c.want_close) {
-                    break;
-                }
-            } else if (m == 0) {
-                // Peer closed connection gracefully - mark for closure
-                c.want_close = true;
-                break;
-            } else {
-                // Error or would block
-                if (errno == EAGAIN || errno == EWOULDBLOCK)
-                    break;  // No more data available - connection stays alive
-                // Connection error - mark for closure
-                c.want_close = true;
-                break;
-            }
-        }
+        on_data_available(c.conn);
     } catch (const std::exception& e) {
         on_exception_occurred(e);
         c.want_close = true;  // Mark for closure on exception
     }
-
-    delete[] buf;
 }
 #if defined(__linux__) || defined(__linux)
 
@@ -505,15 +478,25 @@ void epoll_server::on_connection_closed(std::shared_ptr<connection> conn) {
  * - Detached threads prevent blocking the main event loop
  * - Connection lifetime managed by shared_ptr reference counting
  */
-void epoll_server::on_message_received(std::shared_ptr<connection> conn, const data_buffer& db) {
-    std::cout << "Message Received from " << conn->native_handle() << ": " << db.to_string()
-              << std::endl;
-    std::string message = "Echo " + db.to_string();
-
-    if (db.to_string() == "close\n")
+void epoll_server::on_data_available(std::shared_ptr<connection> conn) {
+    try {
+        std::string all_data;
+        while (true) {
+            data_buffer db = conn->read();
+            if (db.size() == 0)
+                break;
+            all_data += db.to_string();
+            if (db.to_string() == "close\n") {
+                close_connection(conn);
+                break;
+            }
+        }
+        std::cout << "Received from " << conn->native_handle() << ": " << all_data << std::endl;
+        send_message(conn, data_buffer(all_data));  // Echo back
+    } catch (const std::exception& e) {
+        on_exception_occurred(e);
         close_connection(conn);
-    else
-        send_message(conn, data_buffer(message));
+    }
 }
 
 /**

@@ -40,7 +40,7 @@ TEST(EpollServerTest, BasicEchoServer) {
         auto response1 = client1.read();
         std::string echo1 = response1.to_string();
 
-        EXPECT_NE(echo1.find("Echo " + msg1), std::string::npos);
+        EXPECT_NE(echo1.find(msg1), std::string::npos);
 
         std::string msg2 = "Second message";
         client2.write(data_buffer(msg2));
@@ -48,7 +48,7 @@ TEST(EpollServerTest, BasicEchoServer) {
         auto response2 = client2.read();
         std::string echo2 = response2.to_string();
 
-        EXPECT_NE(echo2.find("Echo " + msg2), std::string::npos);
+        EXPECT_NE(echo2.find(msg2), std::string::npos);
 
         client1.close();
         client2.close();
@@ -90,7 +90,7 @@ TEST(EpollServerTest, TestConnectionPersistance) {
 
                 auto resp = persistent_conn.read();
                 std::string echo = resp.to_string();
-                EXPECT_NE(echo.find("Echo " + msg), std::string::npos);
+                EXPECT_NE(echo.find(msg), std::string::npos);
             }
 
             persistent_conn.close();

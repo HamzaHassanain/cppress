@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <map>
 #include <thread>
 
 #include "includes/data_buffer.hpp"
@@ -13,21 +14,100 @@ public:
     EchoServer() : cppress::sockets::epoll_server(1000) {}
 
 protected:
+    // Per-connection state: accumulate data across multiple on_data_available calls
+    std::map<int, std::vector<char>> connection_buffers;  // Use vector for efficient append
+    std::map<int, size_t> expected_content_length;
+    std::map<int, bool> headers_parsed;
+
     void on_connection_opened(std::shared_ptr<cppress::sockets::connection> conn) override {
-        std::cout << "Client connected from: " << conn->remote_endpoint().to_string() << std::endl;
+        int fd = conn->native_handle();
+        connection_buffers[fd].reserve(10 * 1024 * 1024);  // Pre-allocate 10MB
+        expected_content_length[fd] = 0;
+        headers_parsed[fd] = false;
     }
 
-    void on_message_received(std::shared_ptr<cppress::sockets::connection> conn,
-                             const cppress::sockets::data_buffer& message) override {
-        std::cout << std::this_thread::get_id() << " ";
-        std::cout << "Received: " << message.to_string() << std::endl;
-        // Echo the message back
-        send_message(conn, message);
-        close_connection(conn);
+    void on_data_available(std::shared_ptr<cppress::sockets::connection> conn) override {
+        try {
+            int fd = conn->native_handle();
+
+            // Read ALL available data in this event (edge-triggered)
+            while (true) {
+                cppress::sockets::data_buffer db = conn->read();
+                if (db.size() == 0)
+                    break;  // No more data available RIGHT NOW (not EOF!)
+
+                // Efficient append using vector - avoids string reallocation
+                auto& buffer = connection_buffers[fd];
+                buffer.insert(buffer.end(), db.data(), db.data() + db.size());
+            }
+
+            // Parse headers if not done yet
+            if (!headers_parsed[fd]) {
+                auto& buffer = connection_buffers[fd];
+                std::string_view view(buffer.data(), buffer.size());
+                size_t header_end = view.find("\r\n\r\n");
+                if (header_end != std::string::npos) {
+                    headers_parsed[fd] = true;
+
+                    // Extract Content-Length from headers
+                    std::string_view headers = view.substr(0, header_end);
+                    size_t cl_pos = headers.find("Content-Length:");
+                    if (cl_pos != std::string::npos) {
+                        size_t start = cl_pos + 15;
+                        size_t end = headers.find("\r\n", start);
+                        std::string_view length_str = headers.substr(start, end - start);
+                        // Trim whitespace
+                        while (!length_str.empty() &&
+                               (length_str[0] == ' ' || length_str[0] == '\t'))
+                            length_str.remove_prefix(1);
+                        expected_content_length[fd] = std::stoull(std::string(length_str));
+                    }
+                }
+            }
+
+            // Check if we have received the complete request
+            if (headers_parsed[fd]) {
+                auto& buffer = connection_buffers[fd];
+                std::string_view view(buffer.data(), buffer.size());
+                size_t header_end = view.find("\r\n\r\n");
+                size_t total_expected = header_end + 4 + expected_content_length[fd];
+
+                if (buffer.size() >= total_expected) {
+                    // Complete request received!
+                    size_t received_body_size = buffer.size() - (header_end + 4);
+
+                    // Send response
+                    std::string response =
+                        "{\"length\": " + std::to_string(received_body_size) + "}\n";
+                    std::string http_response =
+                        "HTTP/1.1 200 OK\r\n"
+                        "Content-Type: application/json\r\n"
+                        "Content-Length: " +
+                        std::to_string(response.size()) +
+                        "\r\n"
+                        "Connection: keep-alive\r\n"
+                        "\r\n" +
+                        response;
+                    send_message(conn, cppress::sockets::data_buffer(http_response));
+
+                    // Clear buffers for next request on same connection
+                    buffer.clear();
+                    expected_content_length[fd] = 0;
+                    headers_parsed[fd] = false;
+                }
+            }
+        } catch (const std::exception& e) {
+            on_exception_occurred(e);
+            close_connection(conn);
+        }
     }
 
     void on_connection_closed(std::shared_ptr<cppress::sockets::connection> conn) override {
-        std::cout << "Client disconnected: " << conn->remote_endpoint().to_string() << std::endl;
+        // Clean up connection state
+        int fd = conn->native_handle();
+        connection_buffers.erase(fd);
+        expected_content_length.erase(fd);
+        headers_parsed.erase(fd);
     }
 
     void on_exception_occurred(const std::exception& e) override {
