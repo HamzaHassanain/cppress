@@ -40,22 +40,25 @@ namespace cppress::http {
  * @warning Changes to these values after server starts may not take effect
  */
 namespace config {
-/// Maximum size of HTTP headers (default: system-dependent)
+/// Maximum size of HTTP headers
 extern size_t MAX_HEADER_SIZE;
 
-/// Maximum size of HTTP request body (default: system-dependent)
-extern size_t MAX_BODY_SIZE;
+/// Maximum size of HTTP request content-length
+extern size_t MAX_CONTENT_LENGTH;
 
-/// Maximum idle time before connection cleanup (default: system-dependent)
+/// Maximum size of HTTP request chunked body size
+extern size_t MAX_CHUNKED_BODY_SIZE;
+
+/// Maximum idle time before connection cleanup
 extern std::chrono::seconds MAX_IDLE_TIME_SECONDS;
 
-/// Server socket listen backlog size (default: system-dependent)
+/// Server socket listen backlog size
 extern int BACKLOG_SIZE;
 
-/// Maximum number of file descriptors for epoll/select (default: system-dependent)
+/// Maximum number of file descriptors for epoll/select
 extern int MAX_FILE_DESCRIPTORS;
 
-/// Timeout for epoll/select operations in milliseconds (default: system-dependent)
+/// Timeout for epoll/select operations in milliseconds
 extern int TIMEOUT_MILLISECONDS;
 }  // namespace config
 

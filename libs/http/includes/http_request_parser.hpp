@@ -39,10 +39,10 @@
 #include <mutex>
 #include <sstream>
 
+#include "../../sockets/includes.hpp"
 #include "http_consts.hpp"
 #include "http_parse_result.hpp"
 #include "http_parse_state.hpp"
-#include "sockets/includes.hpp"
 
 namespace cppress::http {
 
@@ -102,18 +102,6 @@ public:
      */
     http_parse_result begin_parsing(const std::string& connection_id,
                                     const cppress::sockets::data_buffer& data, int socket_fd);
-
-    /**
-     * @brief Remove idle connections that exceed timeout
-     * @param max_idle_time Maximum time connection can be idle
-     * @param close_connection Callback to close timed-out connections
-     *
-     * Iterates through pending_requests_ and closes any connections
-     * that have been idle longer than max_idle_time. Should be called
-     * periodically by the server (e.g., during idle loop).
-     */
-    void cleanup_idle_connections(std::chrono::seconds max_idle_time,
-                                  std::function<void(int)> close_connection);
 
 private:
     /**

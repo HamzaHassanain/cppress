@@ -23,8 +23,6 @@ http_parse_result http_request_parser::parse(std::shared_ptr<cppress::sockets::c
 
 http_parse_result http_request_parser::continue_parsing(http_parse_state& state,
                                                         const cppress::sockets::data_buffer& data) {
-    state.last_activity = std::chrono::steady_clock::now();
-
     if (state.strategy != parse_strategy::CONTENT_LENGTH) {
         return http_parse_result(true, "UNSUPPORTED_PARSE_STRATEGY", state.uri, state.http_version,
                                  {}, "");
@@ -85,22 +83,6 @@ http_parse_result http_request_parser::begin_parsing(const std::string& connecti
 
     // No body to process
     return http_parse_result(true, method, uri, version, headers, "");
-}
-
-void http_request_parser::cleanup_idle_connections(std::chrono::seconds max_idle_time,
-                                                   std::function<void(int)> close_connection) {
-    std::lock_guard<std::mutex> lock(parser_mutex_);
-    auto now = std::chrono::steady_clock::now();
-    for (auto it = pending_requests_.begin(); it != pending_requests_.end();) {
-        auto duration =
-            std::chrono::duration_cast<std::chrono::seconds>(now - it->second.last_activity);
-        if (duration > max_idle_time) {
-            close_connection(it->second.socket_fd);
-            it = pending_requests_.erase(it);
-        } else {
-            ++it;
-        }
-    }
 }
 
 std::pair<bool, std::string> http_request_parser::parse_request_line(
@@ -202,7 +184,6 @@ http_parse_result http_request_parser::parse_content_length_body(
         state_ref.uri = uri;
         state_ref.http_version = version;
         state_ref.headers = headers;
-        state_ref.last_activity = std::chrono::steady_clock::now();
         state_ref.socket_fd = socket_fd;
         return http_parse_result(false, method, uri, version, headers, body);
     }

@@ -46,6 +46,9 @@ struct http_parse_result {
     /// Request headers (multimap allows duplicate header names)
     std::multimap<std::string, std::string> headers;
 
+    /// Trailers (for chunked encoding)
+    std::multimap<std::string, std::string> trailers;
+
     /// Complete request body (empty for GET/HEAD requests)
     std::string body;
 

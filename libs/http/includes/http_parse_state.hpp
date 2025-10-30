@@ -68,11 +68,12 @@ struct http_parse_state {
     /// Request headers (multimap allows duplicate header names)
     std::multimap<std::string, std::string> headers;
 
-    /// Accumulated request body (filled incrementally)
-    std::string accumulated_body;
+    /// Trailers (for chunked encoding)
+    std::multimap<std::string, std::string> trailers;
 
-    /// Timestamp of last data received for this connection
-    std::chrono::steady_clock::time_point last_activity;
+    /// Accumulated request body (filled incrementally if only content-length otherwise, gets
+    /// passed as partial requests are received)
+    std::string accumulated_body;
 
     /// Default constructor
     http_parse_state() = default;

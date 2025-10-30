@@ -17,8 +17,11 @@ namespace config {
 std::chrono::seconds MAX_IDLE_TIME_SECONDS = std::chrono::seconds(5);
 /// @brief Maximum size of HTTP headers (in bytes)
 size_t MAX_HEADER_SIZE = 1024 * 16;
-/// @brief Maximum size of HTTP body (in bytes)
-size_t MAX_BODY_SIZE = 1024 * 1024 * 5;  // 5 MB
+/// @brief Maximum size of HTTP content-length (in bytes)
+size_t MAX_CONTENT_LENGTH = 1024 * 1024 * 10;  // 10 MB
+
+/// @brief Maximum size of HTTP chunked body (in bytes)
+size_t MAX_CHUNKED_BODY_SIZE = 1024 * 1024 * 100;  // 100 MB
 
 }  // namespace config
 

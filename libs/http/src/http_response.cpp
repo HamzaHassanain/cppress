@@ -59,13 +59,26 @@ std::string http_response::to_string() const {
     std::ostringstream response_stream;
     response_stream << version << " " << status_code << " " << status_message << "\r\n";
     response_stream << "Date: " << get_current_date() << "\r\n";
+
+    // Add Content-Length header if not already present (critical for HTTP/1.1 persistent
+    // connections)
+    if (headers.find("CONTENT-LENGTH") == headers.end() &&
+        headers.find("TRANSFER-ENCODING") == headers.end()) {
+        response_stream << "Content-Length: " << body.size() << "\r\n";
+    }
+
+    // Add all other headers
     for (const auto& header : headers) {
         response_stream << shared::to_uppercase(header.first) << ": " << header.second << "\r\n";
     }
-    if (body.size())
-        response_stream << "\r\n" << body;
-    else
-        response_stream << "\r\n";
+
+    // Empty line separating headers from body
+    response_stream << "\r\n";
+
+    // Add body if present
+    if (!body.empty()) {
+        response_stream << body;
+    }
 
     return response_stream.str();
 }
@@ -123,6 +136,82 @@ std::vector<std::string> http_response::get_trailer(const std::string& name) con
         values.push_back(it->second);
     }
     return values;
+}
+
+bool http_response::has_header(const std::string& name) const {
+    return headers.find(shared::to_uppercase(name)) != headers.end();
+}
+
+void http_response::remove_header(const std::string& name) {
+    headers.erase(shared::to_uppercase(name));
+}
+
+void http_response::set_header(const std::string& name, const std::string& value) {
+    std::string upper_name = shared::to_uppercase(name);
+    headers.erase(upper_name);
+    headers.insert({upper_name, value});
+}
+
+void http_response::json(const std::string& json_data, int status_code) {
+    set_status(status_code, get_status_text(status_code));
+    set_header("Content-Type", "application/json; charset=utf-8");
+    set_body(json_data);
+    send();
+}
+
+void http_response::html(const std::string& html_content, int status_code) {
+    set_status(status_code, get_status_text(status_code));
+    set_header("Content-Type", "text/html; charset=utf-8");
+    set_body(html_content);
+    send();
+}
+
+void http_response::text(const std::string& text_content, int status_code) {
+    set_status(status_code, get_status_text(status_code));
+    set_header("Content-Type", "text/plain; charset=utf-8");
+    set_body(text_content);
+    send();
+}
+
+void http_response::redirect(const std::string& location, int status_code) {
+    set_status(status_code, get_status_text(status_code));
+    set_header("Location", location);
+    set_body("");
+    send();
+}
+
+http_response& http_response::status(int code) {
+    set_status(code, get_status_text(code));
+    return *this;
+}
+
+std::string http_response::get_status_text(int code) {
+    static const std::map<int, std::string> status_texts = {{100, "Continue"},
+                                                            {101, "Switching Protocols"},
+                                                            {200, "OK"},
+                                                            {201, "Created"},
+                                                            {202, "Accepted"},
+                                                            {204, "No Content"},
+                                                            {301, "Moved Permanently"},
+                                                            {302, "Found"},
+                                                            {303, "See Other"},
+                                                            {304, "Not Modified"},
+                                                            {307, "Temporary Redirect"},
+                                                            {308, "Permanent Redirect"},
+                                                            {400, "Bad Request"},
+                                                            {401, "Unauthorized"},
+                                                            {403, "Forbidden"},
+                                                            {404, "Not Found"},
+                                                            {405, "Method Not Allowed"},
+                                                            {409, "Conflict"},
+                                                            {422, "Unprocessable Entity"},
+                                                            {500, "Internal Server Error"},
+                                                            {501, "Not Implemented"},
+                                                            {502, "Bad Gateway"},
+                                                            {503, "Service Unavailable"}};
+
+    auto it = status_texts.find(code);
+    return (it != status_texts.end()) ? it->second : "Unknown";
 }
 
 void http_response::end() {

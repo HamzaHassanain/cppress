@@ -102,6 +102,14 @@ private:
 
     /// Function to send a message to the client
     std::function<void(const std::string&)> send_message;
+
+    /**
+     * @brief Get standard status text for a status code.
+     * @param code HTTP status code
+     * @return Standard status text (e.g., "OK" for 200)
+     */
+    static std::string get_status_text(int code);
+
     /**
      * @brief Validate the response before sending.
      * @return true if response is valid, false otherwise
@@ -111,23 +119,17 @@ private:
      */
     bool validate() const;
 
+public:
     /**
      * @brief Private constructor for internal use by http_server.
      * @param version HTTP version
      * @param headers Initial headers
      * @param close_connection Function to close the associated connection
-     *
-     * This constructor is private and can only be called by the http_server
-     * class to ensure proper response object creation and lifecycle management.
      */
     http_response(const std::string& version,
                   const std::multimap<std::string, std::string>& headers,
                   std::function<void()> close_connection,
                   std::function<void(const std::string&)> send_message);
-
-public:
-    /// Allow http_server to access private constructor
-    friend class http_server;
 
     // Copy operations - DELETED for resource safety
     /**
@@ -231,6 +233,86 @@ public:
     std::vector<std::string> get_trailer(const std::string& name) const;
 
     /**
+     * @brief Check if a header exists.
+     * @param name Header name (case-insensitive)
+     * @return true if header exists, false otherwise
+     */
+    bool has_header(const std::string& name) const;
+
+    /**
+     * @brief Remove all values for a specific header.
+     * @param name Header name (case-insensitive)
+     */
+    void remove_header(const std::string& name);
+
+    /**
+     * @brief Set a header value (replaces existing values).
+     * @param name Header name
+     * @param value Header value
+     *
+     * Unlike add_header(), this method removes any existing values
+     * for the header before adding the new value.
+     */
+    void set_header(const std::string& name, const std::string& value);
+
+    /**
+     * @brief Send a JSON response.
+     * @param json_data JSON string to send
+     * @param status_code HTTP status code (default: 200)
+     *
+     * Sets Content-Type to application/json, sets the body,
+     * and sends the response. Does NOT close the connection.
+     *
+     * @code
+     * res.json("{\"message\": \"Success\"}");
+     * res.end();
+     * @endcode
+     */
+    void json(const std::string& json_data, int status_code = 200);
+
+    /**
+     * @brief Send an HTML response.
+     * @param html_content HTML string to send
+     * @param status_code HTTP status code (default: 200)
+     *
+     * Sets Content-Type to text/html, sets the body,
+     * and sends the response. Does NOT close the connection.
+     */
+    void html(const std::string& html_content, int status_code = 200);
+
+    /**
+     * @brief Send a plain text response.
+     * @param text_content Plain text to send
+     * @param status_code HTTP status code (default: 200)
+     *
+     * Sets Content-Type to text/plain, sets the body,
+     * and sends the response. Does NOT close the connection.
+     */
+    void text(const std::string& text_content, int status_code = 200);
+
+    /**
+     * @brief Send a redirect response.
+     * @param location URL to redirect to
+     * @param status_code HTTP status code (default: 302 Found)
+     *
+     * Sets the Location header and sends a redirect response.
+     * Common status codes: 301 (Moved Permanently), 302 (Found),
+     * 303 (See Other), 307 (Temporary Redirect), 308 (Permanent Redirect)
+     */
+    void redirect(const std::string& location, int status_code = 302);
+
+    /**
+     * @brief Set status code with a fluent interface.
+     * @param code HTTP status code
+     * @return Reference to this response for method chaining
+     *
+     * @code
+     * res.status(404).text("Not Found").end();
+     * @endcode
+     */
+    http_response& status(int code);
+
+    /**
      * @brief ends the response, closes the connection with the client
      *
      * @note After calling end(), the response object should not be
@@ -249,8 +331,9 @@ public:
     /**
      * @brief Clear all values for a specific header.
      * @param name Header name
+     * @deprecated Use remove_header() instead for consistency
      */
-    void clear_header_values(const std::string& name) { headers.erase(name); }
+    void clear_header_values(const std::string& name) { remove_header(name); }
 
     /**
      * @brief Send the HTTP trailers.

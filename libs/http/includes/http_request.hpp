@@ -31,9 +31,6 @@
  * }
  * @endcode
  *
- * @warning Do not store references or pointers to http_request objects beyond
- *          the callback scope, as they use move semantics and may become invalid.
- *
  * @see http_response, http_server
  */
 
@@ -41,6 +38,8 @@
 
 #include <functional>
 #include <map>
+#include <string>
+#include <vector>
 
 #include "http_consts.hpp"
 
@@ -73,6 +72,7 @@ private:
     /// Request body content
     std::string body;
 
+public:
     /// Function to close the connection when needed (closes the current client only, it shall know
     /// what to close)
     std::function<void()> close_connection;
@@ -85,15 +85,10 @@ private:
      * @param headers Request headers
      * @param body Request body
      * @param close_connection Function to close the associated connection
-     *
-     * This constructor is private and can only be called by the http_server
-     * class to ensure proper request object creation and lifecycle management.
      */
     http_request(const std::string& method, const std::string& uri, const std::string& version,
                  const std::multimap<std::string, std::string>& headers, const std::string& body,
                  std::function<void()> close_connection);
-
-public:
     // Copy operations - DELETED for resource safety
     /**
      * @brief Copy constructor - DELETED.
@@ -128,51 +123,82 @@ public:
      */
     http_request(http_request&& other);
 
-    /// Allow http_server to access private constructor
-    friend class http_server;
-
-    /**
-     * @brief Safely destroy the request and close connection.
-     * @param Isure Confirmation parameter to prevent accidental calls
-     *
-     * Explicitly destroys the request object and closes the associated
-     * client connection. The boolean parameter serves as a safety check
-     * to prevent accidental destruction.
-     *
-     * @warning This method should not be called if the response also will be needed, as it closes
-     * the connection completely.
-     */
-    void destroy(bool Isure);
-
     /**
      * @brief Get the HTTP method.
+     * @return HTTP method string (GET, POST, PUT, DELETE, etc.)
      */
     std::string get_method() const;
 
     /**
      * @brief Get the request URI.
+     * @return Request URI/path
      */
     std::string get_uri() const;
 
     /**
      * @brief Get the HTTP version.
+     * @return HTTP version string (e.g., "HTTP/1.1")
      */
     std::string get_version() const;
 
     /**
      * @brief Get all values for a specific header.
+     * @param name Header name (case-insensitive)
+     * @return Vector of header values
      */
     std::vector<std::string> get_header(const std::string& name) const;
 
     /**
      * @brief Get all headers as name-value pairs.
+     * @return Vector of header name-value pairs
      */
     std::vector<std::pair<std::string, std::string>> get_headers() const;
 
     /**
      * @brief Get the request body.
+     * @return Request body content
      */
     std::string get_body() const;
+
+    /**
+     * @brief Check if a header exists.
+     * @param name Header name (case-insensitive)
+     * @return true if header exists, false otherwise
+     */
+    bool has_header(const std::string& name) const;
+
+    /**
+     * @brief Get a query parameter from the URI.
+     * @param name Parameter name
+     * @return Parameter value, or empty string if not found
+     *
+     * Parses the query string from the URI (e.g., /path?name=value)
+     * and returns the value for the specified parameter name.
+     *
+     * @code
+     * // For URI: /search?q=test&page=2
+     * std::string query = req.get_query_param("q");  // Returns "test"
+     * std::string page = req.get_query_param("page");  // Returns "2"
+     * @endcode
+     */
+    std::string get_query_param(const std::string& name) const;
+
+    /**
+     * @brief Get all query parameters as name-value pairs.
+     * @return Map of parameter names to values
+     */
+    std::map<std::string, std::string> get_query_params() const;
+
+    /**
+     * @brief Get the path portion of the URI (without query string).
+     * @return Path without query parameters
+     *
+     * @code
+     * // For URI: /search?q=test
+     * std::string path = req.get_path();  // Returns "/search"
+     * @endcode
+     */
+    std::string get_path() const;
 
     /// Default destructor
     ~http_request() = default;

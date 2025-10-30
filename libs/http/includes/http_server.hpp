@@ -66,11 +66,12 @@
 
 #include <string>
 
-#include "http_consts.hpp"
-#include "http_request.hpp"
-#include "http_request_parser.hpp"
-#include "http_response.hpp"
-#include "sockets/includes.hpp"
+#include "../../sockets/includes.hpp"
+#include "./http_connection_id.hpp"
+#include "./http_consts.hpp"
+#include "./http_request.hpp"
+#include "./http_request_parser.hpp"
+#include "./http_response.hpp"
 
 namespace cppress::http {
 /**
@@ -106,6 +107,9 @@ private:
 
     /// Callback for handling HTTP requests and generating responses
     std::function<void(http_request&, http_response&)> request_callback;
+
+    /// Callback triggered when a partial HTTP request is received
+    std::function<void(http_connection_id, http_request&, http_response&)> partial_request_callback;
 
     /// Callback for handling server and network errors
     std::function<void(const std::exception&)> error_callback;
@@ -192,6 +196,16 @@ protected:
      * @note Calls user-provided request callback if set
      */
     virtual void on_request_received(http_request& request, http_response& response);
+
+    /**
+     * @brief Handle partial HTTP request received from the client.
+     *      This will be mostly used with request streaming, where the user wants to upload/download
+     *      part of the request/response body at a time.
+     * @param request  HTTP request object
+     * @param response  HTTP response object to populate
+     */
+    virtual void on_partial_request_received(http_connection_id conn_id, http_request& request,
+                                             http_response& response);
 
     /**
      * @brief Handle HTTP headers received from the client.
@@ -305,6 +319,15 @@ public:
      * @note Useful for periodic maintenance, statistics, or health checks
      */
     void set_waiting_for_activity_callback(std::function<void()> callback);
+    /**
+     * @brief Set the partial request received callback object
+     *      This will be mostly used with request streaming, where the user wants to upload/download
+     *      part of the request/response body at a time.
+     * @param callback that is able to recive:
+     *      http_request& request, http_response& response
+     */
+    void set_partial_request_callback(
+        std::function<void(http_connection_id, http_request&, http_response&)> callback);
 
     /**
      * @brief Set the headers received callback object

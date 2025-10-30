@@ -17,18 +17,6 @@ http_server::http_server(const cppress::sockets::socket_address& addr, int timeo
     }
 
     this->register_listener_socket(this->server_socket);
-
-    // spin a thread that cleans idle connections each MAX_IDLE_TIME_SECONDS
-    std::function<void(int)> close_connection_for_handler = [this](int fd) -> void {
-        this->close_connection(fd);
-    };
-    std::thread([this, close_connection_for_handler]() {
-        while (true) {
-            std::this_thread::sleep_for(std::chrono::seconds(config::MAX_IDLE_TIME_SECONDS));
-            parser_.cleanup_idle_connections(config::MAX_IDLE_TIME_SECONDS,
-                                             close_connection_for_handler);
-        }
-    }).detach();
 }
 
 void http_server::on_message_received(std::shared_ptr<cppress::sockets::connection> conn,
@@ -40,7 +28,7 @@ void http_server::on_message_received(std::shared_ptr<cppress::sockets::connecti
 
     bool is_complete = false;
     std::string method = "", uri = "", http_version = "", body = "";
-    std::multimap<std::string, std::string> headers;
+    std::multimap<std::string, std::string> headers, trailers;
     try {
         auto result = parser_.parse(conn, message);
         is_complete = result.is_complete;
@@ -49,7 +37,7 @@ void http_server::on_message_received(std::shared_ptr<cppress::sockets::connecti
         http_version = result.http_version;
         body = result.body;
         headers = result.headers;
-
+        trailers = result.trailers;
         if (static_cast<int>(headers.size()) >= 0)
             on_headers_received(conn, headers, method, uri, http_version, body);
 
@@ -65,12 +53,10 @@ void http_server::on_message_received(std::shared_ptr<cppress::sockets::connecti
         // Create HTTP response object with default HTTP/1.1 version
         http_response response("HTTP/1.1", {}, close_connection_for_objects,
                                send_message_for_request);
+
         this->on_request_received(request, response);
         return;
     }
-
-    // Shall be removed to support persistent connections
-    // this->stop_reading_from_connection(conn);
 
     // Create HTTP request object with parsed data
     http_request request(method, uri, http_version, headers, body, close_connection_for_objects);
@@ -78,9 +64,14 @@ void http_server::on_message_received(std::shared_ptr<cppress::sockets::connecti
     // Create HTTP response object with default HTTP/1.1 version
     http_response response("HTTP/1.1", {}, close_connection_for_objects, send_message_for_request);
 
-    // Invoke user-defined request handler with parsed request and response objects
-    // User callback populates response and optionally closes connection
-    this->on_request_received(request, response);
+    if (is_complete) {
+        // Invoke user-defined request handler with parsed request and response objects
+        // User callback populates response and optionally closes connection
+        this->on_request_received(request, response);
+    } else {
+        // Incomplete request - may need a different handling strategy
+        this->on_partial_request_received(conn, request, response);
+    }
 }
 
 void http_server::on_request_received(http_request& request, http_response& response) {
@@ -88,6 +79,13 @@ void http_server::on_request_received(http_request& request, http_response& resp
         request_callback(request, response);
     } else {
         throw std::runtime_error("No request handler registered");
+    }
+}
+
+void http_server::on_partial_request_received(http_connection_id conn_id, http_request& request,
+                                              http_response& response) {
+    if (partial_request_callback) {
+        partial_request_callback(conn_id, request, response);
     }
 }
 
@@ -152,4 +150,10 @@ void http_server::set_waiting_for_activity_callback(std::function<void()> callba
     // BUG: Should be waiting_for_activity_callback = callback;
     waiting_for_activity_callback = callback;
 }
+
+void http_server::set_partial_request_callback(
+    std::function<void(http_connection_id, http_request&, http_response&)> callback) {
+    partial_request_callback = callback;
+}
+
 }  // namespace cppress::http

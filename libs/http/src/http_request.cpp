@@ -29,17 +29,6 @@ http_request::http_request(http_request&& other)
       body(std::move(other.body)),
       close_connection(std::move(other.close_connection)) {}
 
-void http_request::destroy(bool Isure) {
-    if (!Isure) {
-        throw std::runtime_error("Insure is false, cannot destroy request.");
-    }
-    close_connection();
-    uri.clear();
-    headers.clear();
-    body.clear();
-    body.clear();  // Note: This appears to be a duplicate clear() call
-}
-
 std::string http_request::get_method() const {
     return method;
 }
@@ -71,5 +60,61 @@ std::vector<std::pair<std::string, std::string>> http_request::get_headers() con
 
 std::string http_request::get_body() const {
     return body;
+}
+
+bool http_request::has_header(const std::string& name) const {
+    return headers.find(shared::to_uppercase(name)) != headers.end();
+}
+
+std::string http_request::get_path() const {
+    size_t query_pos = uri.find('?');
+    if (query_pos != std::string::npos) {
+        return uri.substr(0, query_pos);
+    }
+    return uri;
+}
+
+std::map<std::string, std::string> http_request::get_query_params() const {
+    std::map<std::string, std::string> params;
+    size_t query_pos = uri.find('?');
+
+    if (query_pos == std::string::npos || query_pos == uri.length() - 1) {
+        return params;  // No query string
+    }
+
+    std::string query_string = uri.substr(query_pos + 1);
+    size_t start = 0;
+
+    while (start < query_string.length()) {
+        size_t amp_pos = query_string.find('&', start);
+        size_t end = (amp_pos != std::string::npos) ? amp_pos : query_string.length();
+
+        std::string param = query_string.substr(start, end - start);
+        size_t eq_pos = param.find('=');
+
+        if (eq_pos != std::string::npos) {
+            std::string key = param.substr(0, eq_pos);
+            std::string value = param.substr(eq_pos + 1);
+
+            // Simple URL decoding for common cases
+            // Replace '+' with space
+            for (char& c : value) {
+                if (c == '+')
+                    c = ' ';
+            }
+
+            params[key] = value;
+        }
+
+        start = end + 1;
+    }
+
+    return params;
+}
+
+std::string http_request::get_query_param(const std::string& name) const {
+    auto params = get_query_params();
+    auto it = params.find(name);
+    return (it != params.end()) ? it->second : "";
 }
 }  // namespace cppress::http
