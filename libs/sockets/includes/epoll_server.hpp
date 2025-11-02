@@ -380,7 +380,7 @@ public:
      * @note Overrides tcp_server::listen
      * @note This method blocks until server shutdown
      */
-    virtual void listen(int timeout) override;
+    virtual void listen(int timeout = 1000) override;
 
     /**
      * @brief Registers a listening socket with the epoll server

@@ -50,6 +50,29 @@ std::string url_decode(const std::string& value) {
     }
     return decoded;
 }
+const std::map<int, std::string> http_status_codes = {{100, "Continue"},
+                                                      {101, "Switching Protocols"},
+                                                      {200, "OK"},
+                                                      {201, "Created"},
+                                                      {202, "Accepted"},
+                                                      {204, "No Content"},
+                                                      {301, "Moved Permanently"},
+                                                      {302, "Found"},
+                                                      {303, "See Other"},
+                                                      {304, "Not Modified"},
+                                                      {307, "Temporary Redirect"},
+                                                      {308, "Permanent Redirect"},
+                                                      {400, "Bad Request"},
+                                                      {401, "Unauthorized"},
+                                                      {403, "Forbidden"},
+                                                      {404, "Not Found"},
+                                                      {405, "Method Not Allowed"},
+                                                      {409, "Conflict"},
+                                                      {422, "Unprocessable Entity"},
+                                                      {500, "Internal Server Error"},
+                                                      {501, "Not Implemented"},
+                                                      {502, "Bad Gateway"},
+                                                      {503, "Service Unavailable"}};
 
 const std::vector<std::string> static_extensions = {
     // Web Documents
@@ -256,5 +279,26 @@ std::string get_current_working_directory() {
         throw std::runtime_error("Failed to get current working directory");
     }
 #endif
+}
+
+std::string get_url_path(const std::string& url) {
+    size_t path_start = url.find("://");
+    if (path_start != std::string::npos) {
+        path_start += 3;  // Move past "://"
+    } else {
+        path_start = 0;  // No scheme, start from beginning
+    }
+
+    size_t path_pos = url.find('/', path_start);
+    if (path_pos != std::string::npos) {
+        size_t query_pos = url.find('?', path_pos);
+        if (query_pos != std::string::npos) {
+            return url.substr(path_pos, query_pos - path_pos);
+        } else {
+            return url.substr(path_pos);
+        }
+    }
+
+    return "/";  // Default to root if no path found
 }
 }  // namespace cppress::shared

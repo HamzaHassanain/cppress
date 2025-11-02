@@ -15,6 +15,9 @@ constexpr const char* DELETE_ = "DELETE";
 constexpr const char* HEAD = "HEAD";
 constexpr const char* OPTIONS = "OPTIONS";
 constexpr const char* PATCH = "PATCH";
+constexpr const char* TRACE = "TRACE";
+constexpr const char* CONNECT = "CONNECT";
+constexpr const char* UNKNOWN = "UNKNOWN";
 };  // namespace methods
 
 /**
@@ -34,6 +37,14 @@ extern const std::vector<std::string> static_extensions;
  * MIME type "application/octet-stream" should be used.
  */
 extern const std::map<std::string, std::string> mime_types;
+
+/**
+ * @brief Mapping from HTTP status code to status text.
+ *
+ * This map is used to convert HTTP status codes to their corresponding
+ * status text descriptions.
+ */
+extern const std::map<int, std::string> http_status_codes;
 
 /**
  * @brief URL-encode a string according to RFC 3986.
@@ -116,5 +127,12 @@ std::string to_uppercase(const std::string& str);
  * @return the current working directory as a string
  */
 std::string get_current_working_directory();
+
+/**
+ * @brief Extract the path component from a full URL.
+ * @param url Full URL string (e.g., "http://example.com/path?query=1")
+ * @return Path component (e.g., "/path")
+ */
+std::string get_url_path(const std::string& url);
 
 }  // namespace cppress::shared
