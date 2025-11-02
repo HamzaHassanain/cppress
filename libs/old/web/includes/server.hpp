@@ -677,9 +677,7 @@ protected:
      *
      * @param e The exception that occurred
      */
-    virtual void on_exception_occurred(const std::exception& e) override {
-        this->error_callback(e);
-    }
+    virtual void on_connection_error(const std::exception& e) override { this->error_callback(e); }
 
     /**
      * @brief HTTP server callback for header processing

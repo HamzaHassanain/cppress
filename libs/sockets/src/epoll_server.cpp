@@ -109,7 +109,7 @@ void epoll_server::try_accept() {
 
             on_connection_opened(connptr);
         } catch (const std::exception& e) {
-            on_exception_occurred(e);
+            on_connection_error(e);
             // Continue accepting other connections despite individual failures
         }
     }
@@ -119,7 +119,7 @@ void epoll_server::try_read(epoll_connection& c) {
     try {
         on_data_available(c.conn);
     } catch (const std::exception& e) {
-        on_exception_occurred(e);
+        on_connection_error(e);
         c.want_close = true;  // Mark for closure on exception
     }
 }
@@ -226,7 +226,7 @@ bool epoll_server::flush_writes(epoll_connection& c) {
         }
         return true;
     } catch (const std::exception& e) {
-        on_exception_occurred(e);
+        on_connection_error(e);
         return false;
     }
 }
@@ -266,7 +266,7 @@ void epoll_server::epoll_loop(int timeout) {
                 if (errno == EINTR)
                     continue;  // Interrupted by signal, continue
                 // Fatal error in epoll_wait
-                on_exception_occurred(
+                on_connection_error(
                     std::runtime_error("epoll_wait failed: " + std::string(strerror(errno))));
                 break;
             }
@@ -365,7 +365,7 @@ void epoll_server::epoll_loop(int timeout) {
                 try_accept();
         } catch (const std::exception& e) {
             std::cerr << "UNKNOWN ERROR CAUGHT BY EVENT LOOP: " << e.what() << std::endl;
-            on_exception_occurred(e);
+            on_connection_error(e);
         }
 
     on_shutdown_success();
@@ -452,7 +452,7 @@ void epoll_server::send_message(std::shared_ptr<connection> conn, const data_buf
  * - Implement circuit breaker patterns
  * - Trigger failover mechanisms
  */
-void epoll_server::on_exception_occurred(const std::exception& e) {
+void epoll_server::on_connection_error(const std::exception& e) {
     std::cerr << "Exception: " << e.what() << std::endl;
 }
 
@@ -494,7 +494,7 @@ void epoll_server::on_data_available(std::shared_ptr<connection> conn) {
         std::cout << "Received from " << conn->native_handle() << ": " << all_data << std::endl;
         send_message(conn, data_buffer(all_data));  // Echo back
     } catch (const std::exception& e) {
-        on_exception_occurred(e);
+        on_connection_error(e);
         close_connection(conn);
     }
 }

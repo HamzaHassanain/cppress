@@ -99,7 +99,7 @@ void http_server::on_shutdown_success() {
         server_shutdown_callback();
 }
 
-void http_server::on_exception_occurred(const std::exception& e) {
+void http_server::on_connection_error(const std::exception& e) {
     if (error_callback)
         error_callback(e);
 }

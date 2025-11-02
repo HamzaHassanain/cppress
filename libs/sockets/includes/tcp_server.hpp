@@ -86,7 +86,7 @@ protected:
      *
      * @param e The exception object describing the error.
      */
-    virtual void on_exception_occurred(const std::exception& e) = 0;
+    virtual void on_connection_error(const std::exception& e) = 0;
 
     /**
      * @brief Called when a new connection is opened.

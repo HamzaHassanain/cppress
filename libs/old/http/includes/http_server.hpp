@@ -166,7 +166,7 @@ protected:
      * @param e Exception that occurred
      * @note Forwards to user-provided error callback if set
      */
-    virtual void on_exception_occurred(const std::exception& e) override;
+    virtual void on_connection_error(const std::exception& e) override;
 
     /**
      * @brief Handle client disconnection events.

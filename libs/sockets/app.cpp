@@ -136,7 +136,7 @@ protected:
                 handle_complete_request(conn, fd);
             }
         } catch (const std::exception& e) {
-            on_exception_occurred(e);
+            on_connection_error(e);
             close_connection(conn);
         }
     }
@@ -145,7 +145,7 @@ protected:
         connections.erase(conn->native_handle());
     }
 
-    void on_exception_occurred(const std::exception& e) override {
+    void on_connection_error(const std::exception& e) override {
         std::cerr << "Server error: " << e.what() << std::endl;
     }
 

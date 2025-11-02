@@ -344,6 +344,6 @@ public:
     void send_trailers();
 
     /// Default destructor
-    ~response() = default;
+    virtual ~response() = default;
 };
 }  // namespace cppress::core

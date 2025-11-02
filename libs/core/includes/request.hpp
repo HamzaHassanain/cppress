@@ -207,6 +207,6 @@ public:
     bool is_keep_alive() const;
 
     /// Default destructor
-    ~request() = default;
+    virtual ~request() = default;
 };
 }  // namespace cppress::core

@@ -143,7 +143,7 @@ private:
     /**
      * @brief Override error handling
      */
-    void on_exception_occurred(const std::exception& e) override {
+    void on_connection_error(const std::exception& e) override {
         std::cerr << "🚨 Server exception: " << e.what() << std::endl;
         // Could implement custom error recovery here
     }
